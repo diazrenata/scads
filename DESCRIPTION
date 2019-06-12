@@ -15,6 +15,7 @@ RoxygenNote: 6.1.1
 Imports:
     feasiblesads,
     meteR,
-    magrittr
+    magrittr,
+    testthat
 Remotes: 
     diazrenata/feasiblesads

@@ -39,5 +39,7 @@ sample_METE <- function(s, n, nsamples){
     }
   }
   
+  sims <- as.data.frame(sims)
+  
   return(sims)
 }

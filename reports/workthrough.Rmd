@@ -1,0 +1,29 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup}
+library(scads)
+```
+
+Choose an S and N and sample METE & the feasible set...
+
+```{r choose s and n}
+S = 4
+N = 30
+nsamples = 10
+```
+
+```{r sample FS}
+
+fs_sims <- sample_feasibleset(s = S, n = N, nsamples = nsamples, distinct = TRUE)
+
+```
+
+```{r sample METE}
+
+mete_sims <- sample_METE(s = S, n = N, nsamples = nsamples)
+
+```
+
