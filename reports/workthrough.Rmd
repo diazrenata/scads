@@ -10,9 +10,9 @@ library(scads)
 Choose an S and N and sample METE & the feasible set...
 
 ```{r choose s and n}
-S = 4
-N = 30
-nsamples = 100
+S = 10
+N = 100
+nsamples = 10000
 ```
 
 ```{r sample FS}
@@ -50,5 +50,32 @@ all_sims_long <- rbind(mete_sims_long, fs_sims_long)
 all_sims_plot <- plot_sad_samples(all_sims_long)
 
 all_sims_plot
+```
+
+```{r quantitative comparison}
+
+fs_mete_list <- lapply(1:nrow(fs_sims), make_samples_list, fs_sims, mete_sims, FALSE)
+
+fs_mete_r2 <- vapply(fs_mete_list, FUN = r2_onlist, FUN.VALUE = .8)
+
+
+fs_fs_list <- lapply(1:nrow(fs_sims), make_samples_list, fs_sims, fs_sims, TRUE)
+fs_fs_r2 <- vapply(fs_fs_list, FUN = r2_onlist, FUN.VALUE = .8)
+
+mete_mete_list <- lapply(1:nrow(mete_sims), make_samples_list, mete_sims, mete_sims, TRUE)
+mete_mete_r2 <- vapply(mete_mete_list, FUN = r2_onlist, FUN.VALUE = .8)
+
+fs_mete_r2 <- data.frame(r2 = fs_mete_r2, comparison = "fs_mete")
+fs_fs_r2 <- data.frame(r2 = fs_fs_r2, comparison = "fs_fs")
+mete_mete_r2 <- data.frame(r2 = mete_mete_r2, comparison = "mete_mete")
+
+all_r2 <- rbind(fs_mete_r2, fs_fs_r2, mete_mete_r2)
+
+r2_plot <- ggplot2::ggplot(data = all_r2, ggplot2::aes(x = r2, y = comparison)) + 
+  ggplot2::geom_jitter(data = all_r2) + 
+  ggplot2::theme_bw()
+
+r2_plot
+
 ```
 

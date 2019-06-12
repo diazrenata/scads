@@ -2,7 +2,10 @@
 
 export("%>%")
 export(make_sad_samples_long)
+export(make_samples_list)
 export(plot_sad_samples)
+export(r2)
+export(r2_onlist)
 export(sample_METE)
 export(sample_feasibleset)
 importFrom(dplyr,rename)
