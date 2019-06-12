@@ -12,7 +12,7 @@ Choose an S and N and sample METE & the feasible set...
 ```{r choose s and n}
 S = 4
 N = 30
-nsamples = 10
+nsamples = 100
 ```
 
 ```{r sample FS}
@@ -25,5 +25,30 @@ fs_sims <- sample_feasibleset(s = S, n = N, nsamples = nsamples, distinct = TRUE
 
 mete_sims <- sample_METE(s = S, n = N, nsamples = nsamples)
 
+```
+
+```{r plot samples}
+
+fs_sims_long <- make_sad_samples_long(fs_sims)
+
+fs_sims_plot <- plot_sad_samples(fs_sims_long, sample_type = "Feasible set")
+
+fs_sims_plot
+
+mete_sims_long <- make_sad_samples_long(mete_sims)
+
+mete_sims_plot <- plot_sad_samples(mete_sims_long, sample_type = "MaxEnt")
+
+mete_sims_plot
+
+mete_sims_long$sample_source = "METE"
+fs_sims_long$sample_source = "FS"
+
+
+all_sims_long <- rbind(mete_sims_long, fs_sims_long)
+
+all_sims_plot <- plot_sad_samples(all_sims_long)
+
+all_sims_plot
 ```
 
