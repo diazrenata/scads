@@ -3,11 +3,12 @@
 #' @param s how many species
 #' @param n how many individuals
 #' @param nsamples how many samples to draw
+#' @param distinct TRUE/FALSE filter to distinct vectors. If true may not return nsamples samples.
 #' @return matrix of samples. rows are samples, columns are species
 #' @export
 #' @importFrom meteR meteESF
 #' @importFrom meteR sad
-sample_METE <- function(s, n, nsamples){
+sample_METE <- function(s, n, nsamples, distinct = TRUE){
   sims <- matrix(nrow = nsamples, ncol = s)
   
   if(s==1) {
@@ -41,5 +42,8 @@ sample_METE <- function(s, n, nsamples){
   
   sims <- as.data.frame(sims)
   
+  if(distinct) {
+   sims <- dplyr::distinct(sims)
+  }
   return(sims)
 }

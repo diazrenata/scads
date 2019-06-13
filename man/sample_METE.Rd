@@ -4,7 +4,7 @@
 \alias{sample_METE}
 \title{Draw from METE prediction}
 \usage{
-sample_METE(s, n, nsamples)
+sample_METE(s, n, nsamples, distinct = TRUE)
 }
 \arguments{
 \item{s}{how many species}
@@ -12,6 +12,8 @@ sample_METE(s, n, nsamples)
 \item{n}{how many individuals}
 
 \item{nsamples}{how many samples to draw}
+
+\item{distinct}{TRUE/FALSE filter to distinct vectors. If true may not return nsamples samples.}
 }
 \value{
 matrix of samples. rows are samples, columns are species

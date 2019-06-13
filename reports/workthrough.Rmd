@@ -10,9 +10,9 @@ library(scads)
 Choose an S and N and sample METE & the feasible set...
 
 ```{r choose s and n}
-S = 10
-N = 100
-nsamples = 10000
+S = 4
+N = 20
+nsamples = 100
 ```
 
 ```{r sample FS}
@@ -23,7 +23,7 @@ fs_sims <- sample_feasibleset(s = S, n = N, nsamples = nsamples, distinct = TRUE
 
 ```{r sample METE}
 
-mete_sims <- sample_METE(s = S, n = N, nsamples = nsamples)
+mete_sims <- sample_METE(s = S, n = N, nsamples = nsamples, distinct = TRUE)
 
 ```
 
@@ -52,9 +52,9 @@ all_sims_plot <- plot_sad_samples(all_sims_long)
 all_sims_plot
 ```
 
-```{r quantitative comparison}
+```{r r2 comparison}
 
-fs_mete_list <- lapply(1:nrow(fs_sims), make_samples_list, fs_sims, mete_sims, FALSE)
+fs_mete_list <- lapply(1:min(nrow(fs_sims), nrow(mete_sims)), make_samples_list, fs_sims, mete_sims, FALSE)
 
 fs_mete_r2 <- vapply(fs_mete_list, FUN = r2_onlist, FUN.VALUE = .8)
 
@@ -79,3 +79,30 @@ r2_plot
 
 ```
 
+Trying loglikelihood...
+
+```{r loglik comparison}
+
+this_esf <- meteR::meteESF(S0 = S, N0 = N)
+
+this_mete_sad <- meteR::sad(this_esf)
+
+fs_loglik <- apply(fs_sims, MARGIN= 1, FUN = loglik_sad, 
+                    mete_sad_dist = this_mete_sad)
+
+mete_loglik <- apply(mete_sims, MARGIN = 1, FUN = loglik_sad,
+                      mete_sad_dist = this_mete_sad)
+fs_loglik <- data.frame(loglik = fs_loglik,
+                        source = "FS")
+mete_loglik <- data.frame(loglik = mete_loglik,
+                          source = "METE")
+
+all_loglik <- rbind(fs_loglik, mete_loglik)
+
+all_loglik_plot <- ggplot2::ggplot(data = all_loglik, ggplot2::aes(x = loglik, y = source, color = source)) + 
+  ggplot2::geom_jitter(data = all_loglik) + 
+  ggplot2::theme_bw()
+
+all_loglik_plot
+
+```
