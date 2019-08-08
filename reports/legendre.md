@@ -7,6 +7,7 @@ Some potentially useful aspects of Legendre polynomial approximation:
 
 -   Reduce dimensionality
 -   The difference between two fits is the Euclidean distance between the LgP coefficients
+-   To fit S species, the maximum nb of coefficients is S. Usually you will need considerably fewer.
 
 A rough workflow:
 
@@ -36,7 +37,7 @@ this_sad_draw <- this_sad$r(10)
 sum(this_sad_draw)
 ```
 
-    ## [1] 139
+    ## [1] 185
 
 ``` r
 while(sum(this_sad_draw) != 100) {
