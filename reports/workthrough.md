@@ -1,46 +1,47 @@
----
-title: "R Notebook"
-output: github_document
----
+R Notebook
+================
 
-```{r setup}
+``` r
 library(scads)
 ```
 
 Choose an S and N and sample METE & the feasible set...
 
-```{r choose s and n}
+``` r
 S = 4
 N = 20
 nsamples = 100
 ```
 
-```{r sample FS}
-
+``` r
 fs_sims <- sample_feasibleset(s = S, n = N, nsamples = nsamples, distinct = TRUE)
-
 ```
 
-```{r sample METE}
-
+``` r
 mete_sims <- sample_METE(s = S, n = N, nsamples = nsamples, distinct = TRUE)
-
 ```
 
-```{r plot samples}
-
+``` r
 fs_sims_long <- make_sad_samples_long(fs_sims)
 
 fs_sims_plot <- plot_sad_samples(fs_sims_long, sample_type = "Feasible set")
 
 fs_sims_plot
+```
 
+![](workthrough_files/figure-markdown_github/plot%20samples-1.png)
+
+``` r
 mete_sims_long <- make_sad_samples_long(mete_sims)
 
 mete_sims_plot <- plot_sad_samples(mete_sims_long, sample_type = "MaxEnt")
 
 mete_sims_plot
+```
 
+![](workthrough_files/figure-markdown_github/plot%20samples-2.png)
+
+``` r
 mete_sims_long$sample_source = "METE"
 fs_sims_long$sample_source = "FS"
 
@@ -52,8 +53,9 @@ all_sims_plot <- plot_sad_samples(all_sims_long)
 all_sims_plot
 ```
 
-```{r r2 comparison}
+![](workthrough_files/figure-markdown_github/plot%20samples-3.png)
 
+``` r
 fs_mete_list <- lapply(1:min(nrow(fs_sims), nrow(mete_sims)), make_samples_list, fs_sims, mete_sims, FALSE)
 
 fs_mete_r2 <- vapply(fs_mete_list, FUN = r2_onlist, FUN.VALUE = .8)
@@ -76,13 +78,13 @@ r2_plot <- ggplot2::ggplot(data = all_r2, ggplot2::aes(x = r2, y = comparison)) 
   ggplot2::theme_bw()
 
 r2_plot
-
 ```
+
+![](workthrough_files/figure-markdown_github/r2%20comparison-1.png)
 
 Trying loglikelihood...
 
-```{r loglik comparison}
-
+``` r
 this_esf <- meteR::meteESF(S0 = S, N0 = N)
 
 this_mete_sad <- meteR::sad(this_esf)
@@ -104,5 +106,6 @@ all_loglik_plot <- ggplot2::ggplot(data = all_loglik, ggplot2::aes(x = loglik, y
   ggplot2::theme_bw()
 
 all_loglik_plot
-
 ```
+
+![](workthrough_files/figure-markdown_github/loglik%20comparison-1.png)
