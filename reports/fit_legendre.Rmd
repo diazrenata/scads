@@ -1,0 +1,152 @@
+---
+title: "fit_legendre"
+author: "Renata Diaz"
+date: "8/19/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r legendre raw}
+library(ggplot2)
+library(meteR)
+library(orthopolynom)
+library(dplyr)
+
+get_leg_matrix <- function(n, x) {
+  legcoeff <- legendre.polynomials(n = n, normalized = TRUE)
+  
+  legmat <- as.matrix(as.data.frame(polynomial.values(polynomials=legcoeff,
+                                                      x=scaleX(x, u=-1, v=1))))
+  legmat <- legmat[, 2:ncol(legmat)]
+  
+  colnames(legmat) <- c(1:n)
+  return(legmat)
+}
+
+```
+
+
+```{r get some data}
+
+portal_data <- isds::get_toy_portal_data(download=T)
+
+portal_sad <- portal_data %>%
+  select(species) %>%
+  group_by(species) %>%
+  summarize(abund = n()) %>%
+  ungroup() %>%
+  select(abund) %>%
+  arrange(abund) %>%
+  as.matrix() %>%
+  as.vector()
+
+this_esf <- meteESF(S0 = length(portal_sad), N0 = sum(portal_sad))
+this_sad <- sad(this_esf)
+this_sad_draw <- c(0, 1)
+
+set.seed(1977)
+
+while(sum(this_sad_draw) != sum(portal_sad)) {
+  this_sad_draw <- this_sad$r(length(portal_sad))
+}
+
+mete_sad <- sort(this_sad_draw)
+
+std_df <- data.frame(x = 1:length(portal_sad), 
+                     mete = mete_sad / sum(mete_sad),
+                     real = portal_sad/sum(portal_sad),
+                     nleg = "Emp")
+
+std_df$x <- std_df$x - mean(std_df$x)
+std_df$x <- std_df$x / (max(std_df$x))
+```
+
+```{r plot data}
+
+real_plot <- ggplot(data = std_df, aes(x = x, y = real)) +
+  geom_point(color = "green") +
+  geom_point(aes(x = x, y = mete), color = "blue") +
+  theme_bw() +
+  xlim(-1, 1) +
+  ylim(0, 1)
+real_plot
+```
+
+```{r fit with legendre polynomials, echo =F}
+leg_fits <- list()
+candidates <- c(2:7)
+for(i in 1:length(candidates)) {
+  leg_mat <- get_leg_matrix(n = candidates[i], x = c(1:length(portal_sad)))
+  leg_fits[[i]] <- list()
+  leg_fits[[i]]$real <- lm(std_df$real ~ leg_mat)
+  leg_fits[[i]]$mete <- lm(std_df$mete ~ leg_mat)
+}
+
+predPlots <- list()
+
+std_df_pred <- std_df
+
+for(i in 1:length(leg_fits)) {
+  leg_mat <- get_leg_matrix(n = candidates[i], x = c(1:length(portal_sad)))
+  predvals_real <- predict(leg_fits[[i]]$real, newdata = as.data.frame(std_df$x))
+  predvals_mete <- predict(leg_fits[[i]]$mete, newdata = as.data.frame(std_df$x))
+  
+  newmat <- data.frame(x = std_df$x,
+                       real = predvals_real,
+                       mete = predvals_mete,
+                       nleg = as.character(candidates[i]))
+  std_df_pred <- rbind(std_df_pred, newmat)
+}
+
+
+real_plot <- ggplot(data = filter(std_df_pred, nleg != "Emp"), aes(x = x, y = real, color = nleg)) +
+  geom_point() +
+  geom_line(data = filter(std_df_pred, nleg == "Emp")) +
+  theme_bw()
+
+mete_plot <- ggplot(data = filter(std_df_pred, nleg != "Emp"), aes(x = x, y = mete, color = nleg)) +
+  geom_point() +
+    geom_line(data = filter(std_df_pred, nleg == "Emp")) +
+  theme_bw()
+#
+real_plot
+mete_plot
+
+std_df_pred <- std_df_pred %>%
+  group_by(x) %>%
+  mutate(real_diff = (real - std_df_pred$real[ which((std_df_pred$nleg == "Emp") & (std_df_pred$x == x))]) ^ 2,
+         mete_diff = (mete - std_df_pred$mete[ which((std_df_pred$nleg == "Emp") & (std_df_pred$x == x))]) ^ 2) %>%
+  ungroup()
+
+real_mete_diff <- std_df_pred %>%
+  filter(nleg == "Emp") %>%
+  mutate(real_mete_diff = (real - mete) ^ 2) %>%
+  select(x, real_mete_diff)
+
+real_mete_ssq <- sum(real_mete_diff$real_mete_diff)
+
+
+ssq_pred <- std_df_pred %>%
+  group_by(nleg) %>%
+  summarize(ssq_mete = sum(mete_diff),
+            ssq_real = sum(real_diff)) %>%
+  ungroup() %>%
+  filter(nleg != "Emp") %>%
+  mutate(nleg = as.integer(nleg))
+
+
+ssq_plot <- ggplot(data = ssq_pred, aes(x = nleg, y = ssq_real)) + 
+  geom_point(color = "green") +
+  geom_point(aes(x = nleg, y = ssq_mete), color = "blue") +
+  geom_hline(yintercept = real_mete_ssq, color = "red") +
+  ylim(0 , max(max(ssq_pred$ssq_mete), max(ssq_pred$ssq_real), real_mete_ssq) + .1) +
+  theme_bw()
+
+
+ssq_plot
+
+```

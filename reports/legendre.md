@@ -37,7 +37,7 @@ this_sad_draw <- this_sad$r(10)
 sum(this_sad_draw)
 ```
 
-    ## [1] 185
+    ## [1] 137
 
 ``` r
 while(sum(this_sad_draw) != 100) {
