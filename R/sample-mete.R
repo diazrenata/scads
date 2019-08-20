@@ -45,5 +45,8 @@ sample_METE <- function(s, n, nsamples, distinct = TRUE){
   if(distinct) {
    sims <- dplyr::distinct(sims)
   }
+  
+  sims <- as.data.frame(t(sims))
+  
   return(sims)
 }

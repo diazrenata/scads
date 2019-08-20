@@ -12,10 +12,11 @@ sample_feasibleset <- function(s, n, nsamples, distinct = TRUE){
   sims <- feasiblesads::sample_fs(s, n, nsamples, storeyn = FALSE)
   sims <- as.data.frame(sims)
   if(distinct) { 
-    sims_distinct <- feasiblesads::tally_sets(sims) %>%
+    sims <- feasiblesads::tally_sets(sims) %>%
     dplyr::select(-set_frequency)
-    return(sims_distinct)
-  } else {
-    return(sims)
   }
+  
+  sims <- as.data.frame(t(sims))
+  
+  return(sims)
 }
