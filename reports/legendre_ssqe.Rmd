@@ -38,15 +38,29 @@ nsamples = 10
 
 set.seed(1977)
 
-mete_samples <- sample_METE(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
-  tidyr::gather(key = "sim", value = "abund") %>%
-  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
-                source = "mete")
+load(here::here("reports", "legendre_stash", "fs_mete_samples.RData"))
 
-fs_samples <- sample_feasibleset(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+poilog_draws <- replicate(n = nsamples, expr = draw_poilog_samples(sad_to_use = portal_sad)) %>%
+  as.data.frame() %>%
   tidyr::gather(key = "sim", value = "abund") %>%
   dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
-                source = "fs")
+                source = "poilog")
+
+poilog_draws_wrong <- replicate(n = nsamples, expr = draw_poilog_samples(sad_to_use = portal_sad, scale_mu = .1, scale_sig = 1.5)) %>%
+  as.data.frame() %>%
+  tidyr::gather(key = "sim", value = "abund") %>%
+  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+                source = "poilog_wrong")
+# 
+# mete_samples <- sample_METE(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+#   tidyr::gather(key = "sim", value = "abund") %>%
+#   dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+#                 source = "mete")
+# 
+# fs_samples <- sample_feasibleset(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+#   tidyr::gather(key = "sim", value = "abund") %>%
+#   dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+#                 source = "fs")
 
 portal_sad <- data.frame(
   sim = as.integer(-99),
@@ -54,33 +68,76 @@ portal_sad <- data.frame(
   source = "emp"
 )
 
-all_sads <- dplyr::bind_rows(portal_sad, mete_samples, fs_samples)
+#all_sads <- dplyr::bind_rows(portal_sad, mete_samples, fs_samples, poilog_draws)
 
-all_sads_fit <- all_sads %>%
+# all_sads_fit <- all_sads %>%
+#   dplyr::group_by(source, sim) %>%
+#   dplyr::summarize(ssqe_leg2 = sum((legendre_approx(abund, nleg = 2)$residuals) ^ 2),
+#                    ssqe_leg3= sum((legendre_approx(abund, nleg = 3)$residuals) ^ 2),
+#                    ssqe_leg6 = sum((legendre_approx(abund, nleg = 6)$residuals) ^ 2),
+#                    ssqe_emp = ssqe(a = abund, b = filter(all_sads, source == "emp")$abund),
+#                    ssqe_fs = ssqe(a = abund, b = sample_feasibleset(s = nspp,
+#                                                                     n = nind,
+#                                                                     nsamples = 1)$V1),
+#                    ssqe_mete = ssqe(a = abund, b= sample_METE(s = nspp,
+#                                                               n=nind,
+#                                                               nsamples = 1)$V1),
+#                    ssqe_poilog = ssqe(a = abund, b= draw_poilog_samples(sad_to_use = portal_sad$abund, nspp = nspp,
+#                                                               nind=nind))
+#                    ) %>%
+#   dplyr::ungroup() %>%
+#   tidyr::gather(-sim, -source, key = "ssqe_source", value = "ssqe") %>%
+#   dplyr::mutate(ssqe_source = substr(ssqe_source, 6, nchar(ssqe_source)))
+
+poilog_fit <- rbind(portal_sad, poilog_draws, poilog_draws_wrong) %>%
   dplyr::group_by(source, sim) %>%
   dplyr::summarize(ssqe_leg2 = sum((legendre_approx(abund, nleg = 2)$residuals) ^ 2),
                    ssqe_leg3= sum((legendre_approx(abund, nleg = 3)$residuals) ^ 2),
                    ssqe_leg6 = sum((legendre_approx(abund, nleg = 6)$residuals) ^ 2),
-                   ssqe_emp = ssqe(a = abund, b = filter(all_sads, source == "emp")$abund),
-                   ssqe_fs = ssqe(a = abund, b = sample_feasibleset(s = nspp,
-                                                                    n = nind,
-                                                                    nsamples = 1)$V1),
-                   ssqe_mete = ssqe(a = abund, b= sample_METE(s = nspp,
-                                                              n=nind,
-                                                              nsamples = 1)$V1)) %>%
+                   ssqe_emp = ssqe(a = abund, b = portal_sad$abund),
+                   ssqe_poilog = ssqe(a = abund, b= draw_poilog_samples(sad_to_use = portal_sad$abund))
+                   ) %>%
   dplyr::ungroup() %>%
   tidyr::gather(-sim, -source, key = "ssqe_source", value = "ssqe") %>%
   dplyr::mutate(ssqe_source = substr(ssqe_source, 6, nchar(ssqe_source)))
 
-n_ssqes <- length(unique(all_sads_fit$ssqe_source))
+all_sads_fit <- rbind(all_sads_fit, poilog_fit)
 
-save.image(file = here::here("reports", "legendre_stash", "stash.RData"))
 
+
+# save.image(file = here::here("reports", "legendre_stash", "stash.RData"))
+
+save(all_sads_fit, file = here::here("reports", "legendre_stash", "all_fits_w_poilog.RData"))
 
 ```
 
-````{r or load stuff, echo = F}
-load(here::here("reports", "legendre_stash", "stash.RData"))
+````{r or load stuff, eval  = T}
+load(here::here("reports", "legendre_stash", "all_fits_w_poilog.RData"))
+
+portal_data <- isds::get_toy_portal_data(download=T)
+
+portal_sad <- portal_data %>%
+  select(species) %>%
+  group_by(species) %>%
+  summarize(abund = n()) %>%
+  ungroup() %>%
+  select(abund) %>%
+  arrange(abund) %>%
+  as.matrix() %>%
+  as.vector()
+
+nspp = length(portal_sad)
+nind = sum(portal_sad)
+nsamples = 10
+
+
+portal_sad <- data.frame(
+  sim = as.integer(-99),
+  abund = portal_sad,
+  source = "emp"
+)
+n_ssqes <- length(unique(all_sads_fit$ssqe_source))
+
 ```
 
 ```{r plot ssqes, fig.height= 3 * (n_ssqes / 2), fig.width = 10, echo =F}
@@ -96,7 +153,7 @@ ssqe_plot1 <- ggplot(data = dplyr::filter(all_sads_fit, source != "emp", ssqe_so
   facet_grid(rows = vars(ssqe_source), cols = vars(source), drop = FALSE, switch = "both") +
   theme_bw()
 
-ssqe_plot2 <-  ggplot(data = dplyr::filter(all_sads_fit, source != "emp", ssqe_source %in% c("emp", "mete", "fs")), aes(x = ssqe)) +
+ssqe_plot2 <-  ggplot(data = dplyr::filter(all_sads_fit, source != "emp", ssqe_source %in% c("emp", "mete", "fs", "poilog", "poilog_wrong")), aes(x = ssqe)) +
 geom_histogram() +
   xlim(-0.1, .99) +
   ylim(0, nsamples) +
@@ -113,4 +170,120 @@ gridExtra::grid.arrange(grobs = list(ssqe_plot1, ssqe_plot2), nrow = 1)
 
 ```{r emp plot, echo = F}
 emp_ssq_plot
+```
+
+
+```{r get coefficients, echo = F}
+
+nsamples = 200
+
+mete_samples <- sample_METE(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+  tidyr::gather(key = "sim", value = "abund") %>%
+  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+                source = "mete")
+
+fs_samples <- sample_feasibleset(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+  tidyr::gather(key = "sim", value = "abund") %>%
+  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+                source = "fs")
+
+poilog_draws <- replicate(n = nsamples, expr = draw_poilog_samples(portal_sad$abund)) %>%
+  as.data.frame %>%
+  tidyr::gather(key = "sim", value = "abund") %>%
+  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+                source = "poilog")
+
+poilog_draws_wrong  <- replicate(n = 10, expr = draw_poilog_samples(portal_sad$abund, scale_mu = .1, scale_sig = 1.5)) %>%
+  as.data.frame %>%
+  tidyr::gather(key = "sim", value = "abund") %>%
+  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+                source = "poilog_wrong")
+
+
+all_sads2 <- dplyr::bind_rows(portal_sad, mete_samples, fs_samples, poilog_draws, poilog_draws_wrong)
+
+all_sads_coefficients <- all_sads2 %>%
+  dplyr::group_by(sim, source) %>%
+  dplyr::summarize(
+    intercept = legendre_approx(abund, nleg = 6)$coefficients[1],
+    l1 = legendre_approx(abund, nleg = 6)$coefficients[2],
+    l2 = legendre_approx(abund, nleg = 6)$coefficients[3],
+    l3 = legendre_approx(abund, nleg = 6)$coefficients[4],
+    l4 = legendre_approx(abund, nleg = 6)$coefficients[5],
+    l5 = legendre_approx(abund, nleg = 6)$coefficients[6],
+    l6 = legendre_approx(abund, nleg = 6)$coefficients[7]
+  ) %>%
+  dplyr::ungroup() %>%
+  tidyr::gather(-sim, -source, key = "coefficient", value = "val") 
+
+coeff_plot <- ggplot(data = all_sads_coefficients, aes(x = coefficient, y = val, color = source)) +
+ # geom_point(data = dplyr::filter(all_sads_coefficients, source == "emp"),
+ #            aes(x = coefficient, y = val), color = "green", size = 3, shape = 8) +
+  geom_boxplot() +
+  theme_bw()
+
+coeff_plot
+```
+
+
+
+
+```{r plot sads and scaled sads} 
+
+one_sim <- filter(all_sads2, sim %in% c(1, -99)) %>%
+  group_by(source) %>%
+  mutate(abund = sort(abund)) %>%
+  mutate(x = row_number()) %>%
+  ungroup()
+
+sads_plot <- ggplot(data = one_sim, aes(x =x, y = abund )) +
+  geom_point() +
+  theme_bw() +
+  facet_grid(cols = vars(source))
+
+sads_plot
+```
+
+```{r distances, eval = F, echo = F}
+
+mete_mete_distances <- data.frame(
+  a = "mete", 
+  b = "mete",
+  distance = replicate(n = 50, expr = legendre_distance(draw_from = "mete", nleg = 6, s = nspp, n = nind))
+)
+
+fs_fs_distances <- data.frame(
+  a = "fs", 
+  b = "fs",
+  distance = replicate(n = 50, expr = legendre_distance(draw_from = "fs", nleg = 6, s = nspp, n = nind))
+)
+
+emp_fs_distances <- data.frame(
+  a = "emp", 
+  b = "fs",
+  distance = replicate(n = 50, expr = legendre_distance(empirical = portal_sad$abund, draw_from = "fs", nleg = 6, s = nspp, n = nind))
+)
+
+emp_mete_distances <- data.frame(
+  a = "emp", 
+  b = "mete",
+  distance = replicate(n = 50, expr = legendre_distance(empirical = portal_sad$abund, draw_from = "mete", nleg = 6, s = nspp, n = nind))
+)
+
+all_distances <- dplyr::bind_rows(emp_fs_distances, emp_mete_distances, mete_mete_distances, fs_fs_distances) %>%
+  dplyr::mutate(full_comparison = paste0(a, "-", b))
+
+save(all_distances, file = here::here("reports", "legendre_stash", "all_differences.Rds"))
+
+```
+
+```{r distance plot, echo = F}
+
+load(here::here("reports", "legendre_stash", "all_differences.Rds"))
+
+all_distance_plot <- ggplot(data = all_distances, aes(x = full_comparison, y = distance)) +
+  geom_boxplot() +
+  theme_bw()
+
+all_distance_plot
 ```
