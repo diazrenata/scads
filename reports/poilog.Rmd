@@ -83,26 +83,26 @@ all_sads_plot
 if(load_samples) {
   load(here::here("reports", "sensitivity_stash.Rds"))
 } else {
-set.seed(1977)
-
-mete_samples <- sample_METE(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
-  tidyr::gather(key = "sim", value = "abund") %>%
-  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
-                source = "mete")
-
-fs_samples <- sample_feasibleset(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
-  tidyr::gather(key = "sim", value = "abund") %>%
-  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
-                source = "fs")
-
-sim_sads <- bind_rows(mete_samples, fs_samples) %>%
-  group_by(sim, source) %>%
-  mutate(rank = row_number()) %>%
-  ungroup()
-
-if(save_samples) {
-  save(sim_sads, file = here::here("reports", "sensitivity_stash.Rds"))
-}
+  set.seed(1977)
+  
+  mete_samples <- sample_METE(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+    tidyr::gather(key = "sim", value = "abund") %>%
+    dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+                  source = "mete")
+  
+  fs_samples <- sample_feasibleset(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+    tidyr::gather(key = "sim", value = "abund") %>%
+    dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+                  source = "fs")
+  
+  sim_sads <- bind_rows(mete_samples, fs_samples) %>%
+    group_by(sim, source) %>%
+    mutate(rank = row_number()) %>%
+    ungroup()
+  
+  if(save_samples) {
+    save(sim_sads, file = here::here("reports", "sensitivity_stash.Rds"))
+  }
 }
 
 sample_plot <- ggplot(data = sim_sads, aes(x = rank, y = abund)) +
@@ -119,14 +119,16 @@ sample_plot
 pl <- all_sads %>%
   group_by(source) %>%
   summarize(mu = poilog::poilogMLE(n = abund)$par[1],
-            sig = poilog::poilogMLE(n = abund)$par[2]) %>%
+            sig = poilog::poilogMLE(n = abund)$par[2],
+            ll = poilog::poilogMLE(n = abund)$logLval[1]) %>%
   ungroup()
 
 
 sim_pl <- sim_sads %>%
   group_by(sim, source) %>%
-   summarize(mu = poilog::poilogMLE(n = abund)$par[1],
-            sig = poilog::poilogMLE(n = abund)$par[2]) %>%
+  summarize(mu = poilog::poilogMLE(n = abund)$par[1],
+            sig = poilog::poilogMLE(n = abund)$par[2],
+            ll = poilog::poilogMLE(n = abund)$logLval[1]) %>%
   ungroup() %>%
   select(-sim)
 
@@ -137,7 +139,7 @@ pl <- bind_rows(pl, sim_pl) %>%
 pl_plot <- ggplot(data = pl, aes(x = source, y = val, color = source)) +
   geom_boxplot() +
   theme_bw() +
-  facet_grid(cols = vars(parameter), scales = "free_y")
+  facet_wrap(parameter ~ . , scales = "free_y")
 
 
 pl_plot
