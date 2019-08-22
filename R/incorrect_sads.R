@@ -56,5 +56,19 @@ generate_exponential_sad <- function(sad_to_use) {
   
   exp_sad[1:remainder] <- exp_sad[1:remainder] + 1
   
-  return(exp_sad)
+  return(sort(exp_sad))
+}
+
+#' Generate an SAD like a precipice
+#'
+#' @param sad_to_use sad
+#'
+#' @return sad with 1 species with almost all the individuals and every other species with 1 individual
+#' @export
+#'
+generate_precipice_sad <- function(sad_to_use) {
+  prec_sad <- rep(1, length(sad_to_use))
+  prec_sad[1] <- 1 + (sum(sad_to_use) - length(sad_to_use))
+  
+  return(sort(prec_sad))
 }
