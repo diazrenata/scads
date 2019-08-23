@@ -168,9 +168,10 @@ leg_estimates_overlay <- bind_rows(
 )
 
 
-sim_coeff_plot <- ggplot(data = sim_estimates, aes(x = varindex, y = coefficient)) + 
-  geom_point(alpha = .05) +
-  scale_x_continuous(breaks = unique(sim_estimates$varindex), labels = unique(sim_estimates$varname)) + 
+sim_coeff_plot <- ggplot(data = sim_estimates, aes(x = as.factor(varindex), y = coefficient)) + 
+ # geom_point(alpha = .05) +
+  geom_boxplot() +
+ # scale_x_continuous(breaks = unique(sim_estimates$varindex), labels = unique(sim_estimates$varname)) + 
   theme_bw() +
   facet_grid(cols = vars(sim_source)) +
   theme(axis.text.x = element_text(angle = 75, hjust = 1)) +
