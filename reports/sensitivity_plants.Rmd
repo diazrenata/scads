@@ -106,7 +106,7 @@ gridExtra::grid.arrange(grobs = list(all_sads_plot, coeffs_plot), nrow = 1)
 
 ```{r draw and plot fs and mete corpuses}
 if(load_samples) {
-  load(here::here("reports", "sensitivity_stash.Rds"))
+  load(here::here("reports", "sensitivity_stash_plants.Rds"))
 } else {
 set.seed(1977)
 
@@ -126,7 +126,7 @@ sim_sads <- bind_rows(mete_samples, fs_samples) %>%
   ungroup()
 
 if(save_samples) {
-  save(sim_sads, file = here::here("reports", "sensitivity_stash.Rds"))
+  save(sim_sads, file = here::here("reports", "sensitivity_stash_plants.Rds"))
 }
 }
 
