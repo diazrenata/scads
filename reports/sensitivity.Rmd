@@ -244,3 +244,46 @@ distance_plot <- ggplot(data = coeff_distances, aes(x = dist_source, y = eucl_di
 
 distance_plot
 ```
+
+## Centroids
+
+```{r centroids}
+
+head(sim_estimates)
+
+sim_centroids <- sim_estimates %>%
+  group_by(sim_source, varname, varindex) %>%
+  summarize(centroid_coefficient = mean(coefficient)) %>%
+  ungroup()
+
+
+centroid_plot1 <- ggplot(data = sim_estimates, aes(x = varindex, y = coefficient)) +
+  geom_point(alpha = 0.05) +
+  geom_point(data = sim_centroids, aes(x = varindex, y = centroid_coefficient), color = "red") +
+  facet_grid(cols = vars(sim_source)) +
+  theme_bw()
+
+centroid_plot1
+
+centroid_distances <- sim_estimates %>%
+  left_join(sim_centroids, by = c('sim_source', 'varname', 'varindex')) %>%
+  group_by(sim_source, sim) %>%
+  summarize(dist_to_centroid = eucl_rows(coefficient, centroid_coefficient)) %>%
+  ungroup()
+
+centroid_distances_overlay <- legendre_estimates %>%
+  full_join(sim_centroids, by = c("varname", "varindex")) %>%
+  group_by(source, sim_source) %>%
+  summarize(dist_to_centroid = eucl_rows(coefficient, centroid_coefficient)) %>%
+  ungroup()
+
+
+
+centroid_dist_plot <- ggplot(data = centroid_distances, aes(x = sim_source, y = dist_to_centroid)) +
+  geom_boxplot(color = "grey", alpha = .5) +
+  geom_point(data = centroid_distances_overlay, aes(x = sim_source, y = dist_to_centroid, color = source), size = 3) +
+  theme_bw() 
+
+centroid_dist_plot
+
+```
