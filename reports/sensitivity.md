@@ -24,6 +24,8 @@ Renata Diaz
 Centroids
 ---------
 
+This seems to match intuition from the coefficients plot. I'm not completely sure but I think the euclidean distance *to all other points* (above) is weird for a couple reasons; one being it's not actually being calculated to all other points; I just cycled forward two ticks. So every point gets compared to 2 other points, I guess? i + 2 and i - 2.
+
     ## # A tibble: 6 x 5
     ##   sim_source   sim varname     coefficient varindex
     ##   <chr>      <int> <chr>             <dbl>    <int>
@@ -35,3 +37,10 @@ Centroids
     ## 6 mete           6 (Intercept)      0.0489        1
 
 ![](sensitivity_files/figure-markdown_github/centroids-1.png)![](sensitivity_files/figure-markdown_github/centroids-2.png)
+
+Centroids on log abundance?
+---------------------------
+
+(want to somehow downweight really big abundance values? but euclidean distance in log space seems highly suspect, and I don't really have intuition for interpreting the results)
+
+![](sensitivity_files/figure-markdown_github/abundance%20centroids-1.png)

@@ -247,6 +247,8 @@ distance_plot
 
 ## Centroids
 
+This seems to match intuition from the coefficients plot. I'm not completely sure but I think the euclidean distance *to all other points* (above) is weird for a couple reasons; one being it's not actually being calculated to all other points; I just cycled forward two ticks. So every point gets compared to 2 other points, I guess? i + 2 and i - 2. 
+
 ```{r centroids}
 
 head(sim_estimates)
@@ -285,5 +287,41 @@ centroid_dist_plot <- ggplot(data = centroid_distances, aes(x = sim_source, y = 
   theme_bw() 
 
 centroid_dist_plot
+
+```
+
+## Centroids on log abundance?
+
+(want to somehow downweight really big abundance values? but euclidean distance in log space seems highly suspect, and I don't really have intuition for interpreting the results)
+
+```{r abundance centroids}
+log_sim_sads <- sim_sads %>%
+  mutate(abund = log(abund)) %>%
+  rename(sim_source = source)
+
+log_sim_centroids <- log_sim_sads %>%
+  group_by(sim_source, rank) %>%
+  summarize(centroid_abund = mean(abund)) %>%
+  ungroup() 
+
+log_sads <- all_sads %>%
+  mutate(abund = log(abund)) %>%
+  full_join(log_sim_centroids, by = c("rank")) %>%
+  group_by(sim_source, source) %>%
+  summarize(dist_to_centroid = eucl_rows(abund, centroid_abund)) %>%
+  ungroup()
+
+log_sim_distances <- log_sim_sads %>%
+  left_join(log_sim_centroids, by = "sim_source", "rank") %>%
+  group_by(sim_source, sim) %>%
+  summarize(dist_to_centroid = eucl_rows(abund, centroid_abund)) %>%
+  ungroup()
+
+log_centroid_plot <- ggplot(data = log_sim_distances, aes(x = sim_source, y = dist_to_centroid)) +
+  geom_boxplot(color = "grey", alpha = .5) +
+  geom_point(data = log_sads, aes(x = sim_source, y = dist_to_centroid, color = source), size = 3) +
+  theme_bw()
+
+log_centroid_plot
 
 ```
