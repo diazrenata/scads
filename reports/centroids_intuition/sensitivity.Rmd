@@ -1,7 +1,7 @@
 ---
-title: "Sensitivity - plants"
+title: "Sensitivity"
 author: "Renata Diaz"
-date: "8/23/2019"
+date: "8/22/2019"
 output: github_document
 ---
 
@@ -22,16 +22,18 @@ load_samples <- T
 
 ```{r get some data, echo = F}
 
-portal_sad <- portalr::plant_abundance(level = "Treatment", type = "Winter Annuals", plots = "All", unknowns = F, correct_sp = T, shape = "flat", min_quads = 16) %>%
-   filter(treatment == "control") %>%
-   select(year, species, abundance) %>%
-   filter(year == 1994) %>%
-   select(-year) %>%
-   rename(abund = abundance) %>%
-   select(abund) %>%
-   arrange(abund) %>%
-   as.matrix() %>%
+portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+
+portal_sad <- portal_data %>%
+  select(species) %>%
+  group_by(species) %>%
+  summarize(abund = n()) %>%
+  ungroup() %>%
+  select(abund) %>%
+  arrange(abund) %>%
+  as.matrix() %>%
   as.vector()
+
 nspp = length(portal_sad)
 nind = sum(portal_sad)
 
@@ -106,7 +108,7 @@ gridExtra::grid.arrange(grobs = list(all_sads_plot, coeffs_plot), nrow = 1)
 
 ```{r draw and plot fs and mete corpuses}
 if(load_samples) {
-  load(here::here("reports", "sensitivity_stash_plants.Rds"))
+  load(here::here("reports", "centroids_intuition", "sensitivity_stash.Rds"))
 } else {
 set.seed(1977)
 
@@ -126,7 +128,7 @@ sim_sads <- bind_rows(mete_samples, fs_samples) %>%
   ungroup()
 
 if(save_samples) {
-  save(sim_sads, file = here::here("reports", "sensitivity_stash_plants.Rds"))
+  save(sim_sads, file = here::here("reports", "centroids_intuition", "sensitivity_stash.Rds"))
 }
 }
 
@@ -168,10 +170,9 @@ leg_estimates_overlay <- bind_rows(
 )
 
 
-sim_coeff_plot <- ggplot(data = sim_estimates, aes(x = as.factor(varindex), y = coefficient)) + 
- # geom_point(alpha = .05) +
-  geom_boxplot() +
- # scale_x_continuous(breaks = unique(sim_estimates$varindex), labels = unique(sim_estimates$varname)) + 
+sim_coeff_plot <- ggplot(data = sim_estimates, aes(x = varindex, y = coefficient)) + 
+  geom_point(alpha = .05) +
+  scale_x_continuous(breaks = unique(sim_estimates$varindex), labels = unique(sim_estimates$varname)) + 
   theme_bw() +
   facet_grid(cols = vars(sim_source)) +
   theme(axis.text.x = element_text(angle = 75, hjust = 1)) +
@@ -244,8 +245,9 @@ distance_plot <- ggplot(data = coeff_distances, aes(x = dist_source, y = eucl_di
 distance_plot
 ```
 
-
 ## Centroids
+
+This seems to match intuition from the coefficients plot. I'm not completely sure but I think the euclidean distance *to all other points* (above) is weird for a couple reasons; one being it's not actually being calculated to all other points; I just cycled forward two ticks. So every point gets compared to 2 other points, I guess? i + 2 and i - 2. 
 
 ```{r centroids}
 
@@ -285,5 +287,41 @@ centroid_dist_plot <- ggplot(data = centroid_distances, aes(x = sim_source, y = 
   theme_bw() 
 
 centroid_dist_plot
+
+```
+
+## Centroids on log abundance?
+
+(want to somehow downweight really big abundance values? but euclidean distance in log space seems highly suspect, and I don't really have intuition for interpreting the results)
+
+```{r abundance centroids}
+log_sim_sads <- sim_sads %>%
+  mutate(abund = log(abund)) %>%
+  rename(sim_source = source)
+
+log_sim_centroids <- log_sim_sads %>%
+  group_by(sim_source, rank) %>%
+  summarize(centroid_abund = mean(abund)) %>%
+  ungroup() 
+
+log_sads <- all_sads %>%
+  mutate(abund = log(abund)) %>%
+  full_join(log_sim_centroids, by = c("rank")) %>%
+  group_by(sim_source, source) %>%
+  summarize(dist_to_centroid = eucl_rows(abund, centroid_abund)) %>%
+  ungroup()
+
+log_sim_distances <- log_sim_sads %>%
+  left_join(log_sim_centroids, by = "sim_source", "rank") %>%
+  group_by(sim_source, sim) %>%
+  summarize(dist_to_centroid = eucl_rows(abund, centroid_abund)) %>%
+  ungroup()
+
+log_centroid_plot <- ggplot(data = log_sim_distances, aes(x = sim_source, y = dist_to_centroid)) +
+  geom_boxplot(color = "grey", alpha = .5) +
+  geom_point(data = log_sads, aes(x = sim_source, y = dist_to_centroid, color = source), size = 3) +
+  theme_bw()
+
+log_centroid_plot
 
 ```
