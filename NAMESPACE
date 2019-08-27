@@ -2,6 +2,7 @@
 
 export("%>%")
 export(draw_poilog_samples)
+export(eucl_rows)
 export(generate_even_sad)
 export(generate_exponential_sad)
 export(generate_precipice_sad)

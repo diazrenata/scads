@@ -68,3 +68,16 @@ ssqe <- function(a, b, scale = T) {
   return(sum(sqe))
   
 }
+
+#' Euclidean distance between vectors
+#'
+#' @param v1 row 1
+#' @param v2 row 2
+#'
+#' @return euclidean distance
+#' @export
+#'
+eucl_rows <- function(v1, v2) {
+  m <- matrix(data = c(v1, v2), nrow = 2, byrow = T)
+  return(dist(m, method = "euclidean")[1])
+}
