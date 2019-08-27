@@ -150,16 +150,47 @@ negbin_samples <- negbin_samples %>%
   mutate(rank = as.integer(rank),
          source = "nbinom") 
 
+flat_sample <- data.frame(
+  sim = NA,
+  rank = 1:nspp,
+  abund = sort(scads::generate_even_sad(portal_sad$abund)),
+  source = "even")
+
+exp_sample <- data.frame(
+   sim = NA,
+  rank = 1:nspp,
+  abund = sort(scads::generate_exponential_sad(portal_sad$abund)),
+  source = "exponent"
+)
+
+precipice_sample <-  data.frame(
+  sim = NA,
+  rank = 1:nspp,
+  abund = sort(scads::generate_precipice_sad(portal_sad$abund)),
+  source = "precipice")
+
+stepwise_sample <-  data.frame(
+  sim = NA,
+  rank = 1:nspp,
+  abund = sort(scads::generate_stepwise_sad(portal_sad$abund)),
+  source = "stepwise")
+
 all_samples <- bind_rows(
   portal_sad, 
   mete_samples[[1]], 
   fs_samples[[1]],
   pl_samples,
   ls_samples,
-  negbin_samples
+  negbin_samples,
+  flat_sample,
+  exp_sample,
+  precipice_sample,
+  stepwise_sample
 )
 
 ```
+
+### Raw rank abundance curves
 
 ```{r samples plot}
 
@@ -169,5 +200,53 @@ raw_samples_plot <- ggplot(data = all_samples, aes(x = rank, y = abund)) +
   facet_wrap(facets = source ~ ., scales = "free_y")
 
 raw_samples_plot
+
+```
+
+### Sum of squared errors vs. number of polynomials used
+```{r sse vs nleg}
+
+sse_nleg <- all_samples %>%
+  group_by(sim, source) %>%
+  summarize(sse2 = sum((legendre_approx(abund, 2)$residuals)^2),
+    sse3 = sum((legendre_approx(abund, 3)$residuals)^2),
+         sse4 = sum((legendre_approx(abund, 4)$residuals)^2),
+         sse5 = sum((legendre_approx(abund, 5)$residuals)^2),
+         sse6 = sum((legendre_approx(abund, 6)$residuals)^2)) %>%
+  ungroup() %>%
+  tidyr::gather(-sim, -source, key = "nleg", value = "sse") %>%
+  mutate(nleg = substr(nleg, 4, nchar(nleg))) %>%
+  mutate(nleg = as.integer(nleg))
+
+sse_nleg_plot <- ggplot(data = sse_nleg, aes(x = nleg, y = sse, color = source)) +
+  geom_point(alpha = .5, size = 1) +
+  theme_bw() +
+  facet_wrap(facets = source ~ .) +
+  theme(legend.position = "none")
+
+sse_nleg_plot
+```
+### Fitted coefficients
+
+```{r }
+
+coeffs <- all_samples %>%
+  group_by(sim, source) %>%
+  summarize(intercept = legendre_approx(abund, nleg = 5)$coefficients[1], 
+            l1 = legendre_approx(abund, nleg = 5)$coefficients[2],
+            l2 = legendre_approx(abund, nleg = 5)$coefficients[3],
+            l3 = legendre_approx(abund, nleg = 5)$coefficients[4], 
+            l4 = legendre_approx(abund, nleg = 5)$coefficients[5],
+            l5 = legendre_approx(abund, nleg = 5)$coefficients[6]) %>%
+  ungroup() %>%
+  tidyr::gather(-sim, -source, key = "coefficient", value = "val")
+
+coeffs_plot <- ggplot(data = coeffs, aes(x = coefficient, y = val, color = source)) +
+  geom_point(alpha = .5) +
+  theme_bw() +
+  facet_wrap(facets = source ~ .) +
+  theme(legend.position = "none")
+
+coeffs_plot
 
 ```
