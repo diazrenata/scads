@@ -1,0 +1,173 @@
+---
+title: "Legendre approx vs. functions"
+output: html_notebook
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(meteR)
+library(dplyr)
+library(scads)
+
+set.seed(1977)
+nsamples <- 25
+
+```
+
+```{r get toy data}
+
+portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+
+portal_sad <- portal_data %>%
+  select(species) %>%
+  group_by(species) %>%
+  summarize(abund = n()) %>%
+  ungroup() %>%
+  select(abund) %>%
+  arrange(abund) %>%
+  as.matrix() %>%
+  as.vector()
+
+nspp = length(portal_sad)
+nind = sum(portal_sad)
+
+portal_sad <- data.frame(
+  abund = portal_sad,
+  source = "emp",
+  rank = 1:length(portal_sad)
+)
+
+```
+
+```{r get various derived distributions}
+
+# mete
+## constuct as 50 draws then split into two groups of 25
+mete_draws <- sample_METE(s = nspp, n = nind, nsamples = 2*nsamples, distinct = T)
+
+mete_samples <- list(t(mete_draws[, 1:nsamples]), t(mete_draws[, (nsamples+1):ncol(mete_draws)]))
+
+rm(mete_draws)
+
+mete_samples <- lapply(mete_samples, FUN = function(some_samples)
+  return(some_samples %>%
+           as.data.frame() %>%
+           mutate(sim = row_number()) %>%
+           tidyr::gather(-sim, key = "rank", value = "abund") %>%
+           mutate(rank = substr(rank, 2, nchar(rank))) %>%
+           mutate(rank = as.integer(rank),
+                  source = "mete")))
+
+# fs
+
+fs_draws <- sample_feasibleset(s = nspp, n = nind, nsamples = 2*nsamples, distinct = T)
+
+fs_samples <- list(t(fs_draws[, 1:nsamples]), t(fs_draws[, (nsamples +1):ncol(fs_draws)]))
+
+rm(fs_draws)
+
+fs_samples <- lapply(fs_samples, FUN = function(some_samples)
+  return(some_samples %>%
+           as.data.frame() %>%
+           mutate(sim = row_number()) %>%
+           tidyr::gather(-sim, key = "rank", value = "abund") %>%
+           mutate(rank = substr(rank, 2, nchar(rank))) %>%
+           mutate(rank = as.integer(rank),
+                  source = "fs")))
+
+# poilog
+
+pl_best_fit <- poilog::poilogMLE(portal_sad$abund)
+
+pl_draws <- replicate(n = nsamples * 8, expr = sort(poilog::rpoilog(S = nspp, mu = pl_best_fit$par[1], sig = pl_best_fit$par[2])), simplify = T)
+
+keep_draw <- vapply(pl_draws, 
+                    FUN = function(draw) 
+                      return(length(draw) == nspp),
+                    FUN.VALUE = TRUE)
+
+pl_draws <- pl_draws[keep_draw]
+pl_draws <- pl_draws[1:nsamples]
+names(pl_draws) <- 1:nsamples
+
+pl_samples <- as.data.frame(pl_draws) %>%
+  t() %>%
+  as.data.frame() %>%
+  mutate(sim = row_number()) %>%
+  tidyr::gather(-sim, key = "rank", value = "abund") %>%
+  mutate(rank = substr(rank, 2, nchar(rank))) %>%
+  mutate(rank = as.integer(rank),
+         source = "poilog") 
+
+rm(pl_draws)
+rm(keep_draw)
+rm(pl_best_fit)
+
+
+
+# logseries unconstrained by N
+
+this_esf <- meteR::meteESF(S0 = nspp, N0 = nind)
+this_sad <- meteR::sad(this_esf)
+
+ls_draws <- replicate(n = nsamples,
+                      expr = sort(this_sad$r(n = nspp))) %>%
+  t()
+ls_samples <- apply(ls_draws, MARGIN = 2, FUN = sort) %>%
+  as.data.frame() %>%
+  mutate(sim = row_number()) %>%
+  tidyr::gather(-sim, key = "rank", value = "abund")%>%
+  mutate(rank = substr(rank, 2, nchar(rank))) %>%
+  mutate(rank = as.integer(rank),
+         source = "logseries") 
+
+
+rm(ls_draws)
+rm(this_esf)
+rm(this_sad)
+
+# negative binomial
+negbin_bestfit <- fitdistrplus::fitdist(portal_sad$abund, distr = "nbinom")
+
+negbin_samples <- replicate(n = nsamples * 5, expr = sort(rnbinom(n = nspp,
+                                                                  size = negbin_bestfit$estimate[1], mu = negbin_bestfit$estimate[2]))) %>% 
+  t()
+
+any0 <- apply(negbin_samples, MARGIN = 1, FUN = function(draw) return(any(draw == 0)))
+
+negbin_samples <- negbin_samples[ !any0, ]
+negbin_samples <- negbin_samples[1:nsamples, ]
+
+rm(negbin_bestfit)
+rm(any0)
+
+negbin_samples <- negbin_samples %>%
+  as.data.frame() %>%
+  mutate(sim = row_number()) %>%
+  tidyr::gather(-sim, key = "rank", value = "abund")%>%
+  mutate(rank = substr(rank, 2, nchar(rank))) %>%
+  mutate(rank = as.integer(rank),
+         source = "nbinom") 
+
+all_samples <- bind_rows(
+  portal_sad, 
+  mete_samples[[1]], 
+  fs_samples[[1]],
+  pl_samples,
+  ls_samples,
+  negbin_samples
+)
+
+```
+
+```{r samples plot}
+
+raw_samples_plot <- ggplot(data = all_samples, aes(x = rank, y = abund)) +
+  geom_point(alpha = .5) +
+  theme_bw() +
+  facet_wrap(facets = source ~ ., scales = "free_y")
+
+raw_samples_plot
+
+```
