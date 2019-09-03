@@ -22,11 +22,11 @@ library(dplyr)
 ``` r
 library(scads)
 
-set.seed(1977)
+set.seed(1994)
 nsamples <- 25
 ```
 
-    ## Loading in data version 1.90.0
+    ## Loading in data version 1.127.0
 
     ## Warning in bind_rows_(x, .id): binding factor and character vector,
     ## coercing into character vector

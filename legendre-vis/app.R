@@ -29,6 +29,7 @@ ui <- fluidPage(
     
     # Show a plot of the generated distribution
     mainPanel(
+      plotOutput("sadsPlot"),
       plotOutput("legestPlot")
     )
   )
@@ -36,7 +37,35 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  output$sadsPlot <- renderPlot({
+    
+    abund <- as.integer(unlist(strsplit(input$abund, ",")))
+    
+    sad_df <- list(
+      provided = abund,
+      mete_draw = scads::sample_METE(s = length(abund), n = sum(abund), nsamples = 1)$V1,
+      poilog_draw = sort(scads::draw_poilog_samples(abund)),
+      #fs_draw = scads::sample_feasibleset(s = length(abund), n = sum(abund), nsamples = 1)$V1,
+      flat = scads::generate_even_sad(abund),
+      stepwise = scads::generate_stepwise_sad(abund),
+      expon = scads::generate_exponential_sad(abund),
+      prec = scads::generate_precipice_sad(abund)
+    ) %>%
+      bind_rows() %>%
+      mutate(rank = row_number()) %>%
+      tidyr::gather(-rank, key = "source", value = "abund")
+    
+    sads_plot <- ggplot(data = sad_df, aes(x = rank, y = abund, color = source)) +
+      geom_point() +
+      theme_bw() +
+      facet_wrap(source ~ .) +
+      theme(legend.position = "none")
+    
+    sads_plot
+  })
+  
   output$legestPlot <- renderPlot({
+    
     abund <- as.integer(unlist(strsplit(input$abund, ",")))
     
     sad_df <- list(
@@ -52,13 +81,6 @@ server <- function(input, output) {
       bind_rows() %>%
       mutate(rank = row_number()) %>%
       tidyr::gather(-rank, key = "source", value = "abund")
-    
-    sads_plot <- ggplot(data = sad_df, aes(x = rank, value = abund, color = source)) +
-      geom_line() +
-      theme_bw()
-    
-    sads_plot
-    
     
     leg_coeffs <- lapply(as.list(unique(sad_df$source)),
                          FUN = function(source_name) 

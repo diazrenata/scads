@@ -10,7 +10,7 @@ library(meteR)
 library(dplyr)
 library(scads)
 
-set.seed(1977)
+set.seed(1994)
 nsamples <- 25
 
 ```
