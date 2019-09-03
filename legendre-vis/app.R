@@ -9,6 +9,7 @@
 
 library(shiny)
 library(dplyr)
+library(ggplot2)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -23,12 +24,15 @@ ui <- fluidPage(
                      "Number of bins:",
                      min = 1,
                      max = 50,
-                     value = 30)
+                     value = 30),
+         numericInput("nb_leg", "Number of polynomials",
+                      min = 2, max = 10, step = 1, value = 3)
       ),
       
       # Show a plot of the generated distribution
       mainPanel(
-         plotOutput("distPlot")
+         plotOutput("distPlot"),
+         plotOutput("legestPlot")
       )
    )
 )
@@ -45,6 +49,8 @@ server <- function(input, output) {
       select(abund) %>%
       arrange(abund)
     
+    
+    
    output$distPlot <- renderPlot({
       # generate bins based on input$bins from ui.R
       x    <- portal_sad$abund 
@@ -52,6 +58,26 @@ server <- function(input, output) {
       
       # draw the histogram with the specified number of bins
       hist(x, breaks = bins, col = 'darkgray', border = 'white')
+   }, width = 300, height = 300)
+   
+   output$legestPlot <- renderPlot({
+     
+     leg_estimate <- scads::legendre_approx(portal_sad$abund, nleg = input$nb_leg)
+     
+     leg_coeffs <- data.frame(
+       coeff_name = names(leg_estimate$coefficients),
+       coeff = leg_estimate$coefficients
+     )
+     
+     sse <- sum(leg_estimate$residuals ^ 2)
+     
+     legplot <- ggplot(data = leg_coeffs, aes(x = coeff_name, y = coeff)) +
+       geom_point() +
+       theme_bw() +
+       ggtitle(paste0("Sum squared error: ", sse))
+     
+     legplot
+     
    })
 }
 
