@@ -15,7 +15,7 @@ library(ggplot2)
 ui <- fluidPage(
   
   # Application title
-  titlePanel("Just an SAD"),
+  titlePanel("Coefficients from Legendre approximation on an SAD"),
   
   # Sidebar with a slider input for number of bins 
   sidebarLayout(
