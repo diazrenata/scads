@@ -24,7 +24,10 @@ ui <- fluidPage(
                 "Abundance vector:",
                 value = "1,1,7,36,69,89,99,174,308,1616"),
       numericInput("nb_leg", "Number of polynomials",
-                   min = 2, max = 10, step = 1, value = 3)
+                   min = 2, max = 10, step = 1, value = 3),
+      h6("Here are some useful abundance vectors:"),
+      p("Portal rodents 1990-1995: 1,1,7,36,69,89,99,174,308,1616"),
+      p("Portal winter annuals 1994: 1,1,1,1,4,4,4,4,4,5,8,8,9,13,19,20,31,35, 40,48,56,108,111,169,224,402,428,431,867,1719")
     ),
     
     # Show a plot of the generated distribution
@@ -96,7 +99,9 @@ server <- function(input, output) {
     
     legplot <- ggplot(data = leg_coeffs, aes(x = coeff_name, y = coeff, color = source)) +
       geom_point() +
+      geom_text(aes(x = coeff_name, y = .25, label = signif(coeff, 2))) +
       theme_bw() +
+      ylim(0, .3) +
       facet_wrap(source ~ .) +
       theme(legend.position = "none")
     

@@ -41,8 +41,11 @@ ui <- fluidPage(
       checkboxInput("use_abund", "Use overlay abundance vector?", value = TRUE) ,
       textInput("abund",
                 "Overlay abundance vector:",
-                value = "1,1,7,36,69,89,99,174,308,1616")
-     
+                value = "1,1,7,36,69,89,99,174,308,1616"),
+      h6("Here are some useful abundance vectors:"),
+      p("Portal rodents 1990-1995: 1,1,7,36,69,89,99,174,308,1616"),
+      p("Portal winter annuals 1994: 1,1,1,1,4,4,4,4,4,5,8,8,9,13,19,20,31,35, 40,48,56,108,111,169,224,402,428,431,867,1719")
+      
     ),
     
     # Show a plot of the generated distribution
@@ -57,12 +60,12 @@ server <- function(input, output) {
   output$legSadPlot <- renderPlot({
     
     coeff_values <- c(input$intercept,
-                              input$c1,
-                              input$c2,
-                              input$c3,
-                              input$c4,
-                              input$c5,
-                              input$c6)[1:(input$nleg + 1)]
+                      input$c1,
+                      input$c2,
+                      input$c3,
+                      input$c4,
+                      input$c5,
+                      input$c6)[1:(input$nleg + 1)]
     
     leg_sad <- data.frame(
       abund = scads::legendre_generate(coeff_values = coeff_values, nleg = input$nleg, nspp = input$nspp),
@@ -80,7 +83,7 @@ server <- function(input, output) {
         abund = scaled_abund / sum(scaled_abund)
       )
       
-      ssqe <- ssqe(leg_sad$abund, scaled_abund$abund)
+      ssqe <- scads::ssqe(leg_sad$abund, scaled_abund$abund)
       
       leg_sad_plot <- leg_sad_plot +
         geom_point(data= scaled_abund, aes(x = rank, y = abund), color = "red") +
