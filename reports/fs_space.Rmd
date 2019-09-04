@@ -1,12 +1,14 @@
 ---
 title: "Mapping FS space"
-output: html_notebook
+output: github_document
 ---
 
 ```{r setup}
 library(dplyr)
 library(scads)
 library(ggplot2)
+small = F
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r get an SAD}
@@ -35,7 +37,172 @@ portal_sad <- data.frame(
 
 ```{r get a BUNCH of fs samples}
 
-fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
+# fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
 
-save(fs_bank, file = "fs_bank.Rds")
+# save(fs_bank, file = "fs_bank.Rds")
+
+if(small) {
+  load(here::here("fs_bank_small.Rds"))
+} else{
+    load(here::here("fs_bank.Rds"))
+}
+
+```
+
+```{r manip fs_bank}
+fs_bank_M <- fs_bank %>%
+  as.data.frame() %>%
+  mutate(rank = row_number()) %>%
+  tidyr::gather(-rank, key = "sim", value = "abund") %>%
+  mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
+
+```
+
+```{r density plot perhaps}
+fs_dp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = abund)) + 
+  geom_violin() +
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_sad, aes(x = rank, y = abund), alpha = .5, color = "red") +
+  theme_bw()
+
+fs_dp
+
+```
+
+```{r rescaled sads and density plots}
+
+fs_bank_M <- fs_bank_M %>%
+  mutate(sabund = abund / nind)
+
+portal_sad <- portal_sad %>%
+  mutate(sabund = abund/nind)
+
+fs_sdp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = sabund)) + 
+  geom_violin() +
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_sad, aes(x = rank, y = sabund), alpha = .5, color = "red") +
+  theme_bw()
+
+fs_sdp
+```
+
+```{r get and plot leg approximation}
+
+fs_leg_coeffs <- apply(as.matrix(1:ncol(fs_bank)), MARGIN = 1, 
+                       FUN = function(sim_index, fs_bank_M) 
+                         return(legendre_approx(filter(fs_bank_M, sim == sim_index)$sabund, nleg = 8)$coefficients), fs_bank_M = fs_bank_M)
+
+fs_leg_coeffs_M <- fs_leg_coeffs %>%
+  as.data.frame() %>%
+  mutate(coeff_name = row.names(fs_leg_coeffs)) %>%
+  tidyr::gather(-coeff_name, key = "sim", value = "coeff_value") %>%
+  mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
+
+portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, nleg = 8)$coefficients) %>%
+  mutate(coeff_name = names(legendre_approx(portal_sad$sabund, nleg = 8)$coefficients),
+         coeff_index = row_number())
+
+coeffs_plot <- ggplot(data = fs_leg_coeffs_M, aes(x = coeff_name, y = coeff_value)) +
+  geom_violin() +
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_leg_coeffs, aes(x = coeff_index, y = coeff_value), alpha = .5, color = "red") +
+  theme_bw()
+
+```
+
+```{r distance to centroid}
+
+fs_centroid <- fs_leg_coeffs_M %>%
+  group_by(coeff_name) %>%
+  summarize(centroid_value = mean(coeff_value)) %>%
+  ungroup()
+
+fs_leg_coeffs_M <- fs_leg_coeffs_M %>%
+  left_join(fs_centroid, by = "coeff_name")
+
+portal_leg_coeffs <- portal_leg_coeffs %>%
+  left_join(fs_centroid, by = "coeff_name")
+
+coeffs_c_plot <- coeffs_plot + 
+  geom_line(data = portal_leg_coeffs, aes(x = coeff_index, y = centroid_value), color = "green") 
+coeffs_c_plot
+```
+
+Red is Portal, green is the centroid.
+
+```{r generate from centroid, empirical}
+fs_dist <- fs_leg_coeffs_M %>%
+  group_by(sim) %>%
+  summarize(centroid_dist = eucl_rows(coeff_value, centroid_value)) %>%
+  ungroup() %>%
+  arrange(centroid_dist) %>%
+  mutate(sim_rank = row_number())
+
+estimates_df <- data.frame(
+  rank = c(1:10),
+  centroid = legendre_generate(coeff_values = portal_leg_coeffs$centroid_value, nleg = 8, nspp = 10),
+  closest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == 1)$sim)$coeff_value, nleg = 8, nspp = 10),
+  farthest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)$coeff_value, nleg = 8, nspp = 10),
+  portal = legendre_generate(coeff_values = portal_leg_coeffs$coeff_value, nleg = 8, nspp = 10)) %>%
+  tidyr::gather(-rank, key = "source", value = "est_abund")
+
+true_sads <- filter(fs_bank_M, sim %in% c(filter(fs_dist, sim_rank == 1)$sim, 
+                                          filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)) %>%
+  left_join(select(fs_dist, sim_rank, sim), by = "sim") %>%
+  mutate(source = ifelse((sim_rank == 1), "closest_fs", "farthest_fs")) %>%
+  select(-sim, -sim_rank) %>%
+  bind_rows(mutate(portal_sad, source = "portal")) %>%
+  left_join(estimates_df, by = c("rank", "source")) %>%
+  bind_rows(data.frame(source = "centroid", stringsAsFactors = F))
+
+
+ssqes <- data.frame(
+  source = c("centroid", "closest_fs", "farthest_fs", "portal"),
+  ssqe = c(NA,
+           ssqe(filter(true_sads, source == "closest_fs")$est_abund, filter(true_sads, source == "closest_fs")$sabund), 
+           ssqe(filter(true_sads, source == "farthest_fs")$est_abund, filter(true_sads, source == "farthest_fs")$sabund),
+           ssqe(filter(true_sads, source == "portal")$est_abund, filter(true_sads, source == "portal")$sabund))
+)
+
+estimates_plot <- ggplot(data = estimates_df, aes(x = rank, y = est_abund, color = source)) +
+  geom_point() +
+  geom_line(data = true_sads, aes(x = rank, y = sabund, color = source), alpha = .2) +
+  geom_label(data = ssqes, aes(x = 2, y = c(.95, .87, .8, .73), label = paste0("ssqe: ", format(signif(ssqe, 2), scientific = FALSE)), color = source), show.legend = FALSE) +
+  scale_colour_viridis_d(end = .8, option = "C") +
+  theme_bw() +
+  ylim(0, 1)
+
+estimates_plot
+```
+
+Points are estimates from approximation with 8 polynomials. 
+
+SSQE is error of estimation vs. real value. There is no real value for the centroid, but `closest_fs` is the element of the feasible set with the lowest sum-absolute-distance of coefficients to the centroid coefficients. 
+
+```{r dist to centroid plot}
+all_dist <- fs_dist %>%
+  mutate(source1 = "fs") %>%
+  mutate(source = NA) %>%
+  mutate(source = ifelse(centroid_dist == max(fs_dist$centroid_dist), "farthest_fs", source)) %>%
+  mutate(source = ifelse(centroid_dist == min(fs_dist$centroid_dist), "closest_fs", 
+         source)) %>%
+  bind_rows(data.frame(
+    source = "portal",
+    source1 = "portal",
+    sim = NA,
+    sim_rank = NA,
+    centroid_dist = eucl_rows(portal_leg_coeffs$coeff_value, 
+                              portal_leg_coeffs$centroid_value),
+    stringsAsFactors = F
+  ))
+
+centroid_dist_plot <- ggplot(data = filter(all_dist, source1 != "portal"), aes(x = 0, y = centroid_dist)) +
+  geom_violin() +
+  geom_point(alpha = .1, size = .5) +
+  geom_point(data = filter(all_dist, !is.na(source)), aes(x = 0, y = centroid_dist, color = source), size = 2) +
+  theme_bw()+
+  scale_colour_viridis_d(begin = .2, end = .8, option = "C")
+  
+centroid_dist_plot
+
 ```

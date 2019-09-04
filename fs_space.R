@@ -32,7 +32,7 @@ portal_sad <- data.frame(
 
 set.seed(1977)
 
-fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
+fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 100, distinct = TRUE)
 
-save(fs_bank, file = "fs_bank.Rds")
+save(fs_bank, file = "fs_bank_small.Rds")
 
