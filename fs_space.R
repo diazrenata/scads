@@ -30,6 +30,8 @@ portal_sad <- data.frame(
 
 ## ----get a BUNCH of fs samples-------------------------------------------
 
+set.seed(1977)
+
 fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
 
 save(fs_bank, file = "fs_bank.Rds")
