@@ -21,7 +21,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       numericInput("nleg", "Number of polynomials",
-                   min = 2, max = 6, step = 1, value = 6),
+                   min = 2, max = 6, step = 1, value = 3),
       numericInput("nspp", "Number of species", 
                    min = 2, max = 25, step = 1, value = 10),
       numericInput("intercept", "Intercept",
