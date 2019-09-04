@@ -80,3 +80,28 @@ draw_poilog_samples <- function(sad_to_use, scale_mu = 1, scale_sig = 1) {
   }
   return(poilog_samples)
 }
+
+#' Generate a (scaled) SAD from Legendre coefficients
+#'
+#' @param coeff_values coeffcicient values
+#' @param nleg how many polynomials to use (for shiny app; otherwise implicit in coeff_values)
+#' @param nspp how many speices
+#'
+#' @return vector of scaled abundances
+#' @export
+#'
+legendre_generate <- function(coeff_values, nleg, nspp, scale_pos = 2400 ) {
+  
+  intercept <- coeff_values[1]
+  
+  coeff_values <- coeff_values[2:length(coeff_values)]
+  
+  nleg <- length(coeff_values)
+  
+  leg_matrix <- get_leg_matrix(nleg, c(1:nspp))
+  
+  leg_estimate <- (leg_matrix %*% coeff_values) + intercept
+  
+  return(leg_estimate)
+  
+  }
