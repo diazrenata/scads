@@ -46,3 +46,5 @@ SSQE is error of estimation vs. real value. There is no real value for the centr
 ![](fs_space_files/figure-markdown_github/dist%20to%20centroid%20plot-1.png)
 
 ![](fs_space_files/figure-markdown_github/heatmap-1.png)
+
+![](fs_space_files/figure-markdown_github/linecloud-1.png)
