@@ -285,14 +285,61 @@ fs_coeffs_linecloud
 library(emoGG)
 
 rat_linecloud <- linecloud +
-  geom_emoji(data = mutate(portal_sad, sim = 1, qbin = .1, qbin_alpha = 1), aes(x = rank, y = sabund), emoji = "1f42d")
+  geom_emoji(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), emoji = "1f42d")
 
 rat_linecloud
 
 rat_coeff_linecloud <- fs_coeffs_linecloud +
-  geom_emoji(data = mutate(portal_leg_coeffs, sim = 1, qbin = .1, qbin_alpha = 1),
+  geom_emoji(data = mutate(portal_leg_coeffs, sim = 1, qbin = 0, qbin_alpha = 1),
              aes(x =coeff_index, y= coeff_value), emoji = "1f42d")
 
 rat_coeff_linecloud
+
+```
+
+```{r raw abundance centroid}
+
+raw_abund_centroid <- fs_bank_M %>%
+  select(rank, sim, sabund) %>%
+  group_by(rank) %>%
+  summarize(abund = mean(sabund)) %>%
+  ungroup() %>%
+  mutate(source = "raw_abund_centroid") %>%
+  bind_rows(rename(estimates_df, abund = est_abund))
+
+
+raw_centroid <- ggplot(data = raw_abund_centroid, aes(x = rank, y = abund, color = source)) +
+  geom_point() +
+  geom_line() +
+  theme_bw() +
+  scale_color_viridis_d(option = "viridis")
+
+raw_centroid
+```
+
+```{r obs pred plots, fig.height = 8, fig.width = 4}
+
+fs_raw_dist <- fs_bank_M %>%
+  select(rank, sim, sabund) %>%
+  group_by(sim) %>%
+  summarize(rawdist = eucl_rows(sabund, filter(raw_abund_centroid, source == "raw_abund_centroid")$abund)) %>%
+    ungroup() %>%
+  arrange(rawdist) %>%
+  mutate(raw_sim_rank = row_number()) %>%
+  left_join(fs_dist, by = "sim")
+
+
+raw_coeff_plot <- ggplot(data = fs_raw_dist, aes(x = rawdist, y = centroid_dist)) +
+  geom_point() +
+  geom_line(data = data.frame(x = seq(min(c(fs_raw_dist$rawdist, fs_raw_dist$centroid_dist)), max(c(fs_raw_dist$rawdist, fs_raw_dist$centroid_dist)), length.out = 10)), aes(x = x, y = x), color = "orange") +
+  theme_bw()
+
+raw_coeff_rank_plot <- ggplot(data = fs_raw_dist, aes(x = raw_sim_rank, y = sim_rank)) +
+  geom_point() +
+  geom_line(data = data.frame(x = seq(min(c(fs_raw_dist$raw_sim_rank, fs_raw_dist$sim_rank)), max(c(fs_raw_dist$raw_sim_rank, fs_raw_dist$sim_rank)), length.out = 10)), aes(x = x, y = x), color = "orange") +
+  theme_bw()
+
+gridExtra::grid.arrange(grobs = list(raw_coeff_plot, raw_coeff_rank_plot))
+
 
 ```

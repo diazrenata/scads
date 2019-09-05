@@ -50,3 +50,7 @@ Here we are reconstructing the scaled SAD from the approximated coefficients. Th
 ![](fs_space_files/figure-markdown_github/coefficients%20linecloud-1.png)
 
 ![](fs_space_files/figure-markdown_github/add%20some%20rats-1.png)![](fs_space_files/figure-markdown_github/add%20some%20rats-2.png)
+
+![](fs_space_files/figure-markdown_github/raw%20abundance%20centroid-1.png)
+
+![](fs_space_files/figure-markdown_github/obs%20pred%20plots-1.png)
