@@ -257,8 +257,33 @@ linecloud <- ggplot(data = fs_bank_linecloud, aes(x = rank, y = sabund, color = 
   geom_line(size = .1, show.legend = FALSE) +
   geom_line(data = filter(fs_bank_linecloud, dist_rank <= 3), aes(x = rank, y = sabund, color = as.factor(qbin)), alpha = 1, size = .6) +
   scale_colour_viridis_d(option = "plasma", end = .8) + 
-  theme_bw() 
+  theme_bw() +
+  theme(legend.position = "top")
 
 linecloud
+
+```
+
+```{r coefficients linecloud}
+# fs_dist_rev <- fs_dist %>%
+#   arrange(desc(sim_rank)) %>%
+#   mutate(sim_rank = row_number())
+# 
+# bin_breaks <- unique(fs_bank_linecloud$qbin)
+
+fs_coeffs_cloud <- left_join(fs_leg_coeffs_M, 
+                             distinct(select(fs_bank_linecloud, 
+                                    sim, qbin, qbin_alpha, dist_rank)), by = "sim") %>%
+  left_join(select(portal_leg_coeffs, coeff_name, coeff_index),  by  = "coeff_name")
+
+fs_coeffs_linecloud <-  ggplot(data = fs_coeffs_cloud, aes(x = coeff_index, y = coeff_value, color = as.factor(qbin), alpha = qbin_alpha, group = sim)) +
+  geom_line(size = .1, show.legend = FALSE) +
+  geom_line(data = filter(fs_coeffs_cloud, dist_rank <= 3), aes(x = coeff_index, y = coeff_value, color = as.factor(qbin)), alpha = 1, size = .6) +
+  scale_colour_viridis_d(option = "plasma", end = .8) + 
+  theme_bw() +
+  scale_x_continuous(breaks = unique(fs_coeffs_cloud$coeff_index), labels = unique(fs_coeffs_cloud$coeff_name)) +
+  theme(legend.position = "top")
+
+fs_coeffs_linecloud
 
 ```
