@@ -7,7 +7,7 @@ output: github_document
 library(dplyr)
 library(scads)
 library(ggplot2)
-small = F
+small = T
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
@@ -44,7 +44,7 @@ portal_sad <- data.frame(
 if(small) {
   load(here::here("fs_bank_small.Rds"))
 } else{
-    load(here::here("fs_bank.Rds"))
+  load(here::here("fs_bank.Rds"))
 }
 
 ```
@@ -185,7 +185,7 @@ all_dist <- fs_dist %>%
   mutate(source = NA) %>%
   mutate(source = ifelse(centroid_dist == max(fs_dist$centroid_dist), "farthest_fs", source)) %>%
   mutate(source = ifelse(centroid_dist == min(fs_dist$centroid_dist), "closest_fs", 
-         source)) %>%
+                         source)) %>%
   bind_rows(data.frame(
     source = "portal",
     source1 = "portal",
@@ -202,7 +202,40 @@ centroid_dist_plot <- ggplot(data = filter(all_dist, source1 != "portal"), aes(x
   geom_point(data = filter(all_dist, !is.na(source)), aes(x = 0, y = centroid_dist, color = source), size = 2) +
   theme_bw()+
   scale_colour_viridis_d(begin = .2, end = .8, option = "C")
-  
+
 centroid_dist_plot
+
+```
+
+```{r heatmap, fig.height=8, fig.width = 18}
+
+fs_bank_M <- left_join(fs_bank_M, select(fs_dist, sim, centroid_dist), by = "sim")
+
+dist_quantiles <- quantile(fs_bank_M$centroid_dist, probs = c(0, .75, .85, .95, .975, .99, 1))
+
+fs_bank_M <- fs_bank_M %>%
+  mutate(qbin = vapply(as.matrix(fs_bank_M$centroid_dist), 
+                       FUN = function(c_d, d_q) 
+                         return((as.integer(substr(names(d_q)[max(which(d_q <= c_d))],
+                                                   1,
+                                                   nchar(names(d_q)[max(which(d_q <= c_d))]) - 1))) / 100),
+                       d_q = dist_quantiles,
+                       FUN.VALUE = .1))
+
+fs_heatmap <- ggplot(data = fs_bank_M, aes(x = as.factor(qbin), y = sabund, color = qbin)) +
+ geom_point(size = .5, alpha = .1) +
+  geom_point(data = filter(fs_bank_M, qbin > .95), size = 1, alpha = 1) + 
+  scale_colour_viridis_c(option = "plasma", end = .7) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "white"),
+        legend.position = "top",
+        panel.border = element_rect(fill = NA, colour = "black"),
+        panel.spacing.x = unit(0,"line")) +
+  facet_grid(cols = vars(rank), switch = "x")
+fs_heatmap
+
+```
+
+```{r linecloud}
 
 ```

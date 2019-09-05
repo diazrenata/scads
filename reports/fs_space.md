@@ -44,3 +44,5 @@ Points are estimates from approximation with 8 polynomials.
 SSQE is error of estimation vs. real value. There is no real value for the centroid, but `closest_fs` is the element of the feasible set with the lowest sum-absolute-distance of coefficients to the centroid coefficients.
 
 ![](fs_space_files/figure-markdown_github/dist%20to%20centroid%20plot-1.png)
+
+![](fs_space_files/figure-markdown_github/heatmap-1.png)
