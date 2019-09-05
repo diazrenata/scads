@@ -35,12 +35,14 @@ portal_sad <- data.frame(
 
 ```
 
-```{r get a BUNCH of fs samples}
+```{r get a BUNCH of fs samples, eval = F, include=T}
 
-# fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
+fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
+save(fs_bank, file = "fs_bank.Rds")
 
-# save(fs_bank, file = "fs_bank.Rds")
+```
 
+```{r load fs bank}
 if(small) {
   load(here::here("fs_bank_small.Rds"))
 } else{
@@ -60,16 +62,10 @@ fs_bank_M <- fs_bank %>%
 
 ```{r density plot perhaps}
 fs_dp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = abund)) + 
-  geom_violin() +
   geom_point(alpha = .2, size = 1) +
   geom_line(data = portal_sad, aes(x = rank, y = abund), alpha = .5, color = "red") +
-  theme_bw()
-
-fs_dp
-
-```
-
-```{r rescaled sads and density plots}
+  theme_bw() +
+  ggtitle("Abundance: draws from FS vs Portal")
 
 fs_bank_M <- fs_bank_M %>%
   mutate(sabund = abund / nind)
@@ -78,13 +74,16 @@ portal_sad <- portal_sad %>%
   mutate(sabund = abund/nind)
 
 fs_sdp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = sabund)) + 
-  geom_violin() +
   geom_point(alpha = .2, size = 1) +
   geom_line(data = portal_sad, aes(x = rank, y = sabund), alpha = .5, color = "red") +
-  theme_bw()
+  theme_bw() +
+  ggtitle("Abundance: draws from FS vs Portal, rescaled")
 
-fs_sdp
+gridExtra::grid.arrange(grobs = list(fs_dp, fs_sdp), nrow = 1) 
 ```
+
+
+The rescaled vectors (on the right) are what go into Legendre approximation. In this case, these plots should look identical, because all the draws from the feasible set have the same number of individuals as the Portal vector. I have at other times compared SADs without the total abundance constraint, where the rescaled plots could look quite different.
 
 ```{r get and plot leg approximation}
 
@@ -103,7 +102,6 @@ portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, 
          coeff_index = row_number())
 
 coeffs_plot <- ggplot(data = fs_leg_coeffs_M, aes(x = coeff_name, y = coeff_value)) +
-  geom_violin() +
   geom_point(alpha = .2, size = 1) +
   geom_line(data = portal_leg_coeffs, aes(x = coeff_index, y = coeff_value), alpha = .5, color = "red") +
   theme_bw()
@@ -128,7 +126,7 @@ coeffs_c_plot <- coeffs_plot +
 coeffs_c_plot
 ```
 
-Red is Portal, green is the centroid.
+The green line marks the centroid, and the red line marks the Portal estimation values. 
 
 ```{r generate from centroid, empirical}
 fs_dist <- fs_leg_coeffs_M %>%
@@ -165,8 +163,8 @@ ssqes <- data.frame(
 )
 
 estimates_plot <- ggplot(data = estimates_df, aes(x = rank, y = est_abund, color = source)) +
-  geom_point() +
-  geom_line(data = true_sads, aes(x = rank, y = sabund, color = source), alpha = .2) +
+  geom_point(shape = 1) +
+  geom_point(data = true_sads, aes(x = rank, y = sabund, color = source), shape = 8) +
   geom_label(data = ssqes, aes(x = 2, y = c(.95, .87, .8, .73), label = paste0("ssqe: ", format(signif(ssqe, 2), scientific = FALSE)), color = source), show.legend = FALSE) +
   scale_colour_viridis_d(end = .8, option = "C") +
   theme_bw() +
@@ -175,9 +173,7 @@ estimates_plot <- ggplot(data = estimates_df, aes(x = rank, y = est_abund, color
 estimates_plot
 ```
 
-Points are estimates from approximation with 8 polynomials. 
-
-SSQE is error of estimation vs. real value. There is no real value for the centroid, but `closest_fs` is the element of the feasible set with the lowest sum-absolute-distance of coefficients to the centroid coefficients. 
+Here we are reconstructing the scaled SAD from the approximated coefficients. The hollow points are estimates from approximation with 8 polynomials, and the stars mark the true values. Using 8 polynomials for a 10-species vector gives us extremely low SSQE. There is no real value for the centroid, but `closest_fs` is the element of the feasible set with the lowest euclidean distance between its coefficients and the centroid coefficients. 
 
 ```{r dist to centroid plot}
 all_dist <- fs_dist %>%
@@ -206,6 +202,9 @@ centroid_dist_plot <- ggplot(data = filter(all_dist, source1 != "portal"), aes(x
 centroid_dist_plot
 
 ```
+
+
+
 
 ```{r heatmap, fig.height=8, fig.width = 18}
 
@@ -246,13 +245,6 @@ fs_bank_linecloud <- fs_bank_M %>%
   right_join(fs_bank_M, by =c("sim", "centroid_dist")) %>%
   mutate(qbin_alpha = ifelse(qbin <= .75, .75, qbin))
 
-# 
-# ranks_to_plot <- c(1:3, floor(seq(5, max(fs_bank_linecloud$dist_rank), length.out = 10)))
-# 
-# fs_bank_linecloud <- fs_bank_linecloud %>%
-#   filter(dist_rank %in% ranks_to_plot) 
-#   
-
 linecloud <- ggplot(data = fs_bank_linecloud, aes(x = rank, y = sabund, color = as.factor(qbin), alpha = qbin_alpha, group = sim)) +
   geom_line(size = .1, show.legend = FALSE) +
   geom_line(data = filter(fs_bank_linecloud, dist_rank <= 3), aes(x = rank, y = sabund, color = as.factor(qbin)), alpha = 1, size = .6) +
@@ -285,5 +277,22 @@ fs_coeffs_linecloud <-  ggplot(data = fs_coeffs_cloud, aes(x = coeff_index, y = 
   theme(legend.position = "top")
 
 fs_coeffs_linecloud
+
+```
+
+```{r add some rats}
+
+library(emoGG)
+
+rat_linecloud <- linecloud +
+  geom_emoji(data = mutate(portal_sad, sim = 1, qbin = .1, qbin_alpha = 1), aes(x = rank, y = sabund), emoji = "1f42d")
+
+rat_linecloud
+
+rat_coeff_linecloud <- fs_coeffs_linecloud +
+  geom_emoji(data = mutate(portal_leg_coeffs, sim = 1, qbin = .1, qbin_alpha = 1),
+             aes(x =coeff_index, y= coeff_value), emoji = "1f42d")
+
+rat_coeff_linecloud
 
 ```
