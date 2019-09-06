@@ -7,22 +7,51 @@ output: github_document
 library(dplyr)
 library(scads)
 library(ggplot2)
-small = F
+dataset <- "plants"
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r get an SAD}
-portal_data <- isds::get_toy_portal_data(download=T, years = c(1994))
-
-portal_sad <- portal_data %>%
-  select(species) %>%
-  group_by(species) %>%
-  summarize(abund = n()) %>%
-  ungroup() %>%
-  select(abund) %>%
-  arrange(abund) %>%
-  as.matrix() %>%
-  as.vector()
+if(dataset == "plants") {
+  
+  portal_sad <- portalr::plant_abundance(level = "Treatment", type = "Winter Annuals", plots = "All", unknowns = F, correct_sp = T, shape = "flat", min_quads = 16) %>%
+    filter(treatment == "control") %>%
+    select(year, species, abundance) %>%
+    filter(year == 1994) %>%
+    select(-year) %>%
+    rename(abund = abundance) %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+} else if(dataset == "rodents94") {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1994))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+} else {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+}
 
 nspp = length(portal_sad)
 nind = sum(portal_sad)
@@ -43,13 +72,16 @@ save(fs_bank, file = "fs_bank_94.Rds")
 ```
 
 ```{r load fs bank}
-load(here::here("fs_bank_94.Rds"))
 
-# if(small) {
-#   load(here::here("fs_bank_small.Rds"))
-# } else {
-#   load(here::here("fs_bank.Rds"))
-# }
+if(dataset == "plants") {
+  load(here::here("fs_bank_plants.Rds"))
+} else if(dataset == "rodents94") {
+  load(here::here("fs_bank_94.Rds"))
+} else if(dataset == "small") {
+  load(here::here("fs_bank_small.Rds"))
+} else {
+  load(here::here("fs_bank.Rds"))
+}
 
 ```
 
@@ -259,15 +291,10 @@ linecloud
 ```
 
 ```{r coefficients linecloud}
-# fs_dist_rev <- fs_dist %>%
-#   arrange(desc(sim_rank)) %>%
-#   mutate(sim_rank = row_number())
-# 
-# bin_breaks <- unique(fs_bank_linecloud$qbin)
 
 fs_coeffs_cloud <- left_join(fs_leg_coeffs_M, 
                              distinct(select(fs_bank_linecloud, 
-                                    sim, qbin, qbin_alpha, dist_rank)), by = "sim") %>%
+                                             sim, qbin, qbin_alpha, dist_rank)), by = "sim") %>%
   left_join(select(portal_leg_coeffs, coeff_name, coeff_index),  by  = "coeff_name")
 
 fs_coeffs_linecloud <-  ggplot(data = fs_coeffs_cloud, aes(x = coeff_index, y = coeff_value, color = as.factor(qbin), alpha = qbin_alpha, group = sim)) +
@@ -284,18 +311,24 @@ fs_coeffs_linecloud
 
 ```{r add some rats}
 
+if(dataset == "plants") {
+  emojiCode <- "1f3f5"
+} else {
+  emojiCode <- "1f42d"
+}
+
 library(emoGG)
 
-rat_linecloud <- linecloud +
-  geom_emoji(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), emoji = "1f42d")
+emp_linecloud <- linecloud +
+  geom_emoji(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), emoji = emojiCode)
 
-rat_linecloud
+emp_linecloud
 
-rat_coeff_linecloud <- fs_coeffs_linecloud +
+emp_coeff_linecloud <- fs_coeffs_linecloud +
   geom_emoji(data = mutate(portal_leg_coeffs, sim = 1, qbin = 0, qbin_alpha = 1),
-             aes(x =coeff_index, y= coeff_value), emoji = "1f42d")
+             aes(x =coeff_index, y= coeff_value), emoji = emojiCode)
 
-rat_coeff_linecloud
+emp_coeff_linecloud
 
 ```
 
@@ -325,7 +358,7 @@ fs_raw_dist <- fs_bank_M %>%
   select(rank, sim, sabund) %>%
   group_by(sim) %>%
   summarize(rawdist = eucl_rows(sabund, filter(raw_abund_centroid, source == "raw_abund_centroid")$abund)) %>%
-    ungroup() %>%
+  ungroup() %>%
   arrange(rawdist) %>%
   mutate(raw_sim_rank = row_number()) %>%
   left_join(fs_dist, by = "sim")
