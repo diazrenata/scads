@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r get an SAD}
-portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+portal_data <- isds::get_toy_portal_data(download=T, years = c(1994))
 
 portal_sad <- portal_data %>%
   select(species) %>%
@@ -38,16 +38,18 @@ portal_sad <- data.frame(
 ```{r get a BUNCH of fs samples, eval = F, include=T}
 
 fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
-save(fs_bank, file = "fs_bank.Rds")
+save(fs_bank, file = "fs_bank_94.Rds")
 
 ```
 
 ```{r load fs bank}
-if(small) {
-  load(here::here("fs_bank_small.Rds"))
-} else{
-  load(here::here("fs_bank.Rds"))
-}
+load(here::here("fs_bank_94.Rds"))
+
+# if(small) {
+#   load(here::here("fs_bank_small.Rds"))
+# } else {
+#   load(here::here("fs_bank.Rds"))
+# }
 
 ```
 
@@ -89,7 +91,7 @@ The rescaled vectors (on the right) are what go into Legendre approximation. In 
 
 fs_leg_coeffs <- apply(as.matrix(1:ncol(fs_bank)), MARGIN = 1, 
                        FUN = function(sim_index, fs_bank_M) 
-                         return(legendre_approx(filter(fs_bank_M, sim == sim_index)$sabund, nleg = 8)$coefficients), fs_bank_M = fs_bank_M)
+                         return(legendre_approx(filter(fs_bank_M, sim == sim_index)$sabund, nleg = 4)$coefficients), fs_bank_M = fs_bank_M)
 
 fs_leg_coeffs_M <- fs_leg_coeffs %>%
   as.data.frame() %>%
@@ -97,8 +99,8 @@ fs_leg_coeffs_M <- fs_leg_coeffs %>%
   tidyr::gather(-coeff_name, key = "sim", value = "coeff_value") %>%
   mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
 
-portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, nleg = 8)$coefficients) %>%
-  mutate(coeff_name = names(legendre_approx(portal_sad$sabund, nleg = 8)$coefficients),
+portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, nleg = 4)$coefficients) %>%
+  mutate(coeff_name = names(legendre_approx(portal_sad$sabund, nleg = 4)$coefficients),
          coeff_index = row_number())
 
 coeffs_plot <- ggplot(data = fs_leg_coeffs_M, aes(x = coeff_name, y = coeff_value)) +
@@ -137,11 +139,11 @@ fs_dist <- fs_leg_coeffs_M %>%
   mutate(sim_rank = row_number())
 
 estimates_df <- data.frame(
-  rank = c(1:10),
-  centroid = legendre_generate(coeff_values = portal_leg_coeffs$centroid_value, nleg = 8, nspp = 10),
-  closest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == 1)$sim)$coeff_value, nleg = 8, nspp = 10),
-  farthest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)$coeff_value, nleg = 8, nspp = 10),
-  portal = legendre_generate(coeff_values = portal_leg_coeffs$coeff_value, nleg = 8, nspp = 10)) %>%
+  rank = c(1:nspp),
+  centroid = legendre_generate(coeff_values = portal_leg_coeffs$centroid_value, nleg = 4, nspp = nspp),
+  closest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == 1)$sim)$coeff_value, nleg = 4, nspp = nspp),
+  farthest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)$coeff_value, nleg = 4, nspp = nspp),
+  portal = legendre_generate(coeff_values = portal_leg_coeffs$coeff_value, nleg = 4, nspp = nspp)) %>%
   tidyr::gather(-rank, key = "source", value = "est_abund")
 
 true_sads <- filter(fs_bank_M, sim %in% c(filter(fs_dist, sim_rank == 1)$sim, 

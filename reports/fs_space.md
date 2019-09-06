@@ -35,6 +35,8 @@ The rescaled vectors (on the right) are what go into Legendre approximation. In 
 
 The green line marks the centroid, and the red line marks the Portal estimation values.
 
+    ## Warning: Removed 2 rows containing missing values (geom_point).
+
     ## Warning: Removed 1 rows containing missing values (geom_point).
 
 ![](fs_space_files/figure-markdown_github/generate%20from%20centroid,%20empirical-1.png)
