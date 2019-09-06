@@ -35,7 +35,7 @@ The rescaled vectors (on the right) are what go into Legendre approximation. In 
 
 The green line marks the centroid, and the red line marks the Portal estimation values.
 
-    ## Warning: Removed 2 rows containing missing values (geom_point).
+    ## Warning: Removed 1 rows containing missing values (geom_point).
 
     ## Warning: Removed 1 rows containing missing values (geom_point).
 
@@ -56,3 +56,11 @@ Here we are reconstructing the scaled SAD from the approximated coefficients. Th
 ![](fs_space_files/figure-markdown_github/raw%20abundance%20centroid-1.png)
 
 ![](fs_space_files/figure-markdown_github/obs%20pred%20plots-1.png)
+
+![](fs_space_files/figure-markdown_github/evar-1.png)![](fs_space_files/figure-markdown_github/evar-2.png)![](fs_space_files/figure-markdown_github/evar-3.png)
+
+There seems to be some relationship to skewness - skewness locates you in a particular part of the state space. Not sure what that means.
+
+![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-1.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-2.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-3.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-4.png)
+
+Skewness is not equivalent to centroid distance.

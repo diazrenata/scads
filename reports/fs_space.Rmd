@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r get an SAD}
-if(dataset == "plants") {
+if(dataset == "rodents94") {
   
   portal_sad <- portalr::plant_abundance(level = "Treatment", type = "Winter Annuals", plots = "All", unknowns = F, correct_sp = T, shape = "flat", min_quads = 16) %>%
     filter(treatment == "control") %>%
@@ -24,6 +24,8 @@ if(dataset == "plants") {
     arrange(abund) %>%
     as.matrix() %>%
     as.vector()
+  
+  nleg <- 10
   
 } else if(dataset == "rodents94") {
   portal_data <- isds::get_toy_portal_data(download=T, years = c(1994))
@@ -38,6 +40,8 @@ if(dataset == "plants") {
     as.matrix() %>%
     as.vector()
   
+  nleg <- 5
+  
 } else {
   portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
   
@@ -51,6 +55,7 @@ if(dataset == "plants") {
     as.matrix() %>%
     as.vector()
   
+  nleg <- 8
 }
 
 nspp = length(portal_sad)
@@ -123,7 +128,7 @@ The rescaled vectors (on the right) are what go into Legendre approximation. In 
 
 fs_leg_coeffs <- apply(as.matrix(1:ncol(fs_bank)), MARGIN = 1, 
                        FUN = function(sim_index, fs_bank_M) 
-                         return(legendre_approx(filter(fs_bank_M, sim == sim_index)$sabund, nleg = 10)$coefficients), fs_bank_M = fs_bank_M)
+                         return(legendre_approx(filter(fs_bank_M, sim == sim_index)$sabund, nleg = nleg)$coefficients), fs_bank_M = fs_bank_M)
 
 fs_leg_coeffs_M <- fs_leg_coeffs %>%
   as.data.frame() %>%
@@ -131,8 +136,8 @@ fs_leg_coeffs_M <- fs_leg_coeffs %>%
   tidyr::gather(-coeff_name, key = "sim", value = "coeff_value") %>%
   mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
 
-portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, nleg = 10)$coefficients) %>%
-  mutate(coeff_name = names(legendre_approx(portal_sad$sabund, nleg = 10)$coefficients),
+portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, nleg = nleg)$coefficients) %>%
+  mutate(coeff_name = names(legendre_approx(portal_sad$sabund, nleg = nleg)$coefficients),
          coeff_index = row_number())
 
 coeffs_plot <- ggplot(data = fs_leg_coeffs_M, aes(x = coeff_name, y = coeff_value)) +
@@ -172,10 +177,10 @@ fs_dist <- fs_leg_coeffs_M %>%
 
 estimates_df <- data.frame(
   rank = c(1:nspp),
-  centroid = legendre_generate(coeff_values = portal_leg_coeffs$centroid_value, nleg = 10, nspp = nspp),
-  closest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == 1)$sim)$coeff_value, nleg = 10, nspp = nspp),
-  farthest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)$coeff_value, nleg = 10, nspp = nspp),
-  portal = legendre_generate(coeff_values = portal_leg_coeffs$coeff_value, nleg = 10, nspp = nspp)) %>%
+  centroid = legendre_generate(coeff_values = portal_leg_coeffs$centroid_value, nleg = nleg, nspp = nspp),
+  closest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == 1)$sim)$coeff_value, nleg = nleg, nspp = nspp),
+  farthest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)$coeff_value, nleg = nleg, nspp = nspp),
+  portal = legendre_generate(coeff_values = portal_leg_coeffs$coeff_value, nleg = nleg, nspp = nspp)) %>%
   tidyr::gather(-rank, key = "source", value = "est_abund")
 
 true_sads <- filter(fs_bank_M, sim %in% c(filter(fs_dist, sim_rank == 1)$sim, 
@@ -370,3 +375,83 @@ gridExtra::grid.arrange(grobs = list(raw_coeff_plot, raw_coeff_rank_plot))
 
 
 ```
+
+```{r evar}
+
+fs_bank_mets <- fs_bank_M %>%
+  group_by(sim) %>%
+  mutate(evar = conditionalsads::evar(sabund),
+         skew =  conditionalsads::rad_skew(sabund)) %>%
+  ungroup()
+
+
+evar_plot <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = evar, group = sim)) +
+  geom_line(size = .1, alpha = .2) +
+  geom_line(data = filter(fs_bank_mets, evar <= quantile(fs_bank_mets$evar, probs = .001)[1]), alpha = .5, size = .5) +
+  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top")
+
+evar_plot
+
+
+skew_plot <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = skew, group = sim)) +
+  geom_line(size = .1, alpha = .2) +
+  geom_line(data = filter(fs_bank_mets, skew <= quantile(fs_bank_mets$skew, probs = .001)[1]), alpha = .5, size = .3) + 
+  geom_line(data = filter(fs_bank_mets, skew >= quantile(fs_bank_mets$skew, probs = 0.999)[1]), alpha = .5, size = .3) +
+  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top") +
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
+
+skew_plot
+
+coeffs_skew <- fs_bank_mets %>%
+  select(sim, skew) %>%
+  distinct() %>%
+  right_join(fs_leg_coeffs_M, by = "sim") %>%
+  left_join(select(portal_leg_coeffs, coeff_name, coeff_index), by = "coeff_name")
+
+coeffs_skew_plot <- ggplot(data = coeffs_skew, aes(x = coeff_index, y = coeff_value, color = skew, group = sim)) + 
+  geom_line(size = .1, alpha = .2) +
+  geom_line(data = filter(coeffs_skew, skew <= quantile(coeffs_skew$skew, probs = .001)[1]), alpha = .5, size = .3) + 
+  geom_line(data = filter(coeffs_skew, skew >= quantile(coeffs_skew$skew, probs = 0.999)[1]), alpha = .5, size = .3) +
+  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top")  +
+  geom_point(data = mutate(portal_leg_coeffs, sim = 1, qbin = 0, qbin_alpha = 1),
+             aes(x =coeff_index, y= coeff_value),  color = "#FF0000", show.legend = F)
+
+coeffs_skew_plot
+```
+
+There seems to be some relationship to skewness - skewness locates you in a particular part of the state space. Not sure what that means. 
+
+```{r compare skew to distance}
+skew_distance <- coeffs_skew %>%
+  select(sim, skew) %>%
+  distinct() %>%
+  arrange(skew) %>%
+  mutate(skew_rank = row_number()) %>%
+  left_join(fs_dist, by = "sim") %>%
+  rename(dist_rank = sim_rank)
+
+skd_plot <- ggplot(data = skew_distance, aes(x = skew, y = centroid_dist)) +
+  geom_point()
+
+skd_plot
+
+skd_rank_plot <- ggplot(data = skew_distance, aes(x = skew_rank, y = dist_rank)) + 
+  geom_point()
+
+skd_rank_plot
+
+skew_violin <- ggplot(data = skew_distance, aes(x = 0, y = skew)) +
+  geom_violin() +
+  geom_point(aes(x = 0, y = conditionalsads::rad_skew(portal_sad$sabund)))
+skew_violin
+
+gridExtra::grid.arrange(grobs = list(skew_violin, centroid_dist_plot))
+```
+
+Skewness is not equivalent to centroid distance. 
