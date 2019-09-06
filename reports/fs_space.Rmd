@@ -123,7 +123,7 @@ The rescaled vectors (on the right) are what go into Legendre approximation. In 
 
 fs_leg_coeffs <- apply(as.matrix(1:ncol(fs_bank)), MARGIN = 1, 
                        FUN = function(sim_index, fs_bank_M) 
-                         return(legendre_approx(filter(fs_bank_M, sim == sim_index)$sabund, nleg = 4)$coefficients), fs_bank_M = fs_bank_M)
+                         return(legendre_approx(filter(fs_bank_M, sim == sim_index)$sabund, nleg = 10)$coefficients), fs_bank_M = fs_bank_M)
 
 fs_leg_coeffs_M <- fs_leg_coeffs %>%
   as.data.frame() %>%
@@ -131,8 +131,8 @@ fs_leg_coeffs_M <- fs_leg_coeffs %>%
   tidyr::gather(-coeff_name, key = "sim", value = "coeff_value") %>%
   mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
 
-portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, nleg = 4)$coefficients) %>%
-  mutate(coeff_name = names(legendre_approx(portal_sad$sabund, nleg = 4)$coefficients),
+portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, nleg = 10)$coefficients) %>%
+  mutate(coeff_name = names(legendre_approx(portal_sad$sabund, nleg = 10)$coefficients),
          coeff_index = row_number())
 
 coeffs_plot <- ggplot(data = fs_leg_coeffs_M, aes(x = coeff_name, y = coeff_value)) +
@@ -172,10 +172,10 @@ fs_dist <- fs_leg_coeffs_M %>%
 
 estimates_df <- data.frame(
   rank = c(1:nspp),
-  centroid = legendre_generate(coeff_values = portal_leg_coeffs$centroid_value, nleg = 4, nspp = nspp),
-  closest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == 1)$sim)$coeff_value, nleg = 4, nspp = nspp),
-  farthest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)$coeff_value, nleg = 4, nspp = nspp),
-  portal = legendre_generate(coeff_values = portal_leg_coeffs$coeff_value, nleg = 4, nspp = nspp)) %>%
+  centroid = legendre_generate(coeff_values = portal_leg_coeffs$centroid_value, nleg = 10, nspp = nspp),
+  closest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == 1)$sim)$coeff_value, nleg = 10, nspp = nspp),
+  farthest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)$coeff_value, nleg = 10, nspp = nspp),
+  portal = legendre_generate(coeff_values = portal_leg_coeffs$coeff_value, nleg = 10, nspp = nspp)) %>%
   tidyr::gather(-rank, key = "source", value = "est_abund")
 
 true_sads <- filter(fs_bank_M, sim %in% c(filter(fs_dist, sim_rank == 1)$sim, 
@@ -311,22 +311,14 @@ fs_coeffs_linecloud
 
 ```{r add some rats}
 
-if(dataset == "plants") {
-  emojiCode <- "1f3f5"
-} else {
-  emojiCode <- "1f42d"
-}
-
-library(emoGG)
-
 emp_linecloud <- linecloud +
-  geom_emoji(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), emoji = emojiCode)
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
 
 emp_linecloud
 
 emp_coeff_linecloud <- fs_coeffs_linecloud +
-  geom_emoji(data = mutate(portal_leg_coeffs, sim = 1, qbin = 0, qbin_alpha = 1),
-             aes(x =coeff_index, y= coeff_value), emoji = emojiCode)
+  geom_point(data = mutate(portal_leg_coeffs, sim = 1, qbin = 0, qbin_alpha = 1),
+             aes(x =coeff_index, y= coeff_value),  color = "#FF0000", show.legend = F)
 
 emp_coeff_linecloud
 

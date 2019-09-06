@@ -19,7 +19,7 @@ library(dplyr)
 ``` r
 library(scads)
 library(ggplot2)
-small = F
+dataset <- "plants"
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
