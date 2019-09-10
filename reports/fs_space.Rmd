@@ -8,7 +8,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(dplyr)
 library(scads)
 library(ggplot2)
-dataset <- "large"
+dataset <- "rodents94"
 ```
 
 ```{r get an SAD}
@@ -566,3 +566,9 @@ gridExtra::grid.arrange(grobs = list(skew_violin, centroid_dist_plot), nrow = 1)
 ```
 
 Skewness is not equivalent to centroid distance. 
+
+```{r portal skewness rank}
+skew_rank_percentile <- filter(skew_distance, skew <= conditionalsads::rad_skew(portal_sad$sabund))
+```
+
+Portal is *very* skewed compared to the bulk of the feasible set. Portal's skewness is `r conditionalsads::rad_skew(portal_sad$sabund)`, which is more skewed than `r (nrow(skew_rank_percentile) / nrow(skew_distance)) * 100`% of the feasible set. 

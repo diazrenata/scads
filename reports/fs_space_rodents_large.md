@@ -133,3 +133,5 @@ The red dot on the skewness plot is Portal.
 ![](fs_space_rodents_large_files/figure-markdown_github/skew%20violin%20plot-1.png)
 
 Skewness is not equivalent to centroid distance.
+
+Portal is *very* skewed compared to the bulk of the feasible set. Portal's skewness is 2.1288833, which is more skewed than 99.62% of the feasible set.
