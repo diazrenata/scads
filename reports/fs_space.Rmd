@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r get an SAD}
-if(dataset == "rodents94") {
+if(dataset == "plants") {
   
   portal_sad <- portalr::plant_abundance(level = "Treatment", type = "Winter Annuals", plots = "All", unknowns = F, correct_sp = T, shape = "flat", min_quads = 16) %>%
     filter(treatment == "control") %>%
@@ -260,17 +260,17 @@ fs_bank_M <- fs_bank_M %>%
                        d_q = dist_quantiles,
                        FUN.VALUE = .1))
 
-fs_heatmap <- ggplot(data = fs_bank_M, aes(x = as.factor(qbin), y = sabund, color = qbin)) +
-  geom_point(size = .5, alpha = .1) +
-  geom_point(data = filter(fs_bank_M, qbin > .95), size = 1, alpha = 1) + 
-  scale_colour_viridis_c(option = "plasma", end = .8) +
-  theme_minimal() +
-  theme(panel.background = element_rect(fill = "white"),
-        legend.position = "top",
-        panel.border = element_rect(fill = NA, colour = "black"),
-        panel.spacing.x = unit(0,"line")) +
-  facet_grid(cols = vars(rank), switch = "x")
-fs_heatmap
+# fs_heatmap <- ggplot(data = fs_bank_M, aes(x = as.factor(qbin), y = sabund, color = qbin)) +
+#   geom_point(size = .5, alpha = .1) +
+#   geom_point(data = filter(fs_bank_M, qbin > .95), size = 1, alpha = 1) + 
+#   scale_colour_viridis_c(option = "plasma", end = .8) +
+#   theme_minimal() +
+#   theme(panel.background = element_rect(fill = "white"),
+#         legend.position = "top",
+#         panel.border = element_rect(fill = NA, colour = "black"),
+#         panel.spacing.x = unit(0,"line")) +
+#   facet_grid(cols = vars(rank), switch = "x")
+# fs_heatmap
 
 ```
 
