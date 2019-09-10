@@ -143,17 +143,20 @@ fs_leg_coeffs <- apply(as.matrix(1:ncol(fs_bank)), MARGIN = 1,
                        FUN = function(sim_index, fs_bank_M) 
                          return(legendre_approx(filter(fs_bank_M, sim == sim_index)$sabund, nleg = nleg)$coefficients), fs_bank_M = fs_bank_M)
 
-fs_leg_coeffs_M <- fs_leg_coeffs %>%
-  as.data.frame() %>%
-  mutate(coeff_name = row.names(fs_leg_coeffs)) %>%
-  tidyr::gather(-coeff_name, key = "sim", value = "coeff_value") %>%
-  mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
 
 portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, nleg = nleg)$coefficients) %>%
   mutate(coeff_name = names(legendre_approx(portal_sad$sabund, nleg = nleg)$coefficients),
          coeff_index = row_number())
 
-coeffs_plot <- ggplot(data = fs_leg_coeffs_M, aes(x = coeff_name, y = coeff_value)) +
+fs_leg_coeffs_M <- fs_leg_coeffs %>%
+  as.data.frame() %>%
+  mutate(coeff_name = row.names(fs_leg_coeffs)) %>%
+  tidyr::gather(-coeff_name, key = "sim", value = "coeff_value") %>%
+  mutate(sim = as.integer(substr(sim, 2, nchar(sim)))) %>%
+  left_join(select(portal_leg_coeffs, coeff_index, coeff_name), by = "coeff_name")
+
+
+coeffs_plot <- ggplot(data = fs_leg_coeffs_M, aes(x = coeff_index, y = coeff_value)) +
   geom_point(alpha = .2, size = 1) +
   geom_line(data = portal_leg_coeffs, aes(x = coeff_index, y = coeff_value), alpha = .5, color = "red") +
   theme_bw()
@@ -327,8 +330,7 @@ linecloud
 
 fs_coeffs_cloud <- left_join(fs_leg_coeffs_M, 
                              distinct(select(fs_bank_linecloud, 
-                                             sim, qbin, qbin_alpha, dist_rank)), by = "sim") %>%
-  left_join(select(portal_leg_coeffs, coeff_name, coeff_index),  by  = "coeff_name")
+                                             sim, qbin, qbin_alpha, dist_rank)), by = "sim")
 
 fs_coeffs_linecloud <-  ggplot(data = fs_coeffs_cloud, aes(x = coeff_index, y = coeff_value, color = as.factor(qbin), alpha = qbin_alpha, group = sim)) +
   geom_line(size = .1, show.legend = FALSE) +
@@ -495,8 +497,7 @@ The y axis is the coefficient values; colors correspond to skewness with the mos
 coeffs_skew <- fs_bank_mets %>%
   select(sim, skew) %>%
   distinct() %>%
-  right_join(fs_leg_coeffs_M, by = "sim") %>%
-  left_join(select(portal_leg_coeffs, coeff_name, coeff_index), by = "coeff_name")
+  right_join(fs_leg_coeffs_M, by = "sim")
 
 coeffs_skew_plot <- ggplot(data = coeffs_skew, aes(x = coeff_index, y = coeff_value, color = skew, group = sim)) + 
   geom_line(size = .1, alpha = .2) +

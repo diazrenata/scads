@@ -4,6 +4,20 @@ Mapping FS space
 ``` r
 knitr::opts_chunk$set(echo = FALSE)
 library(dplyr)
+```
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
+
+``` r
 library(scads)
 library(ggplot2)
 dataset <- "plants"
@@ -24,6 +38,8 @@ The black dots are semi-transparent, which makes it a little easier to see the d
 The rescaled vectors (on the right) are what go into Legendre approximation. In this case, these plots should look identical, because all the draws from the feasible set have the same number of individuals as the Portal vector. I have at other times compared SADs without the total abundance constraint, where the rescaled plots could look quite different.
 
 ![](fs_space_plants_files/figure-markdown_github/plot%20rads%20and%20rescaled%20rads-1.png)
+
+    ## Loading required package: polynom
 
 Density plots of coeffiients from Legendre approximation
 --------------------------------------------------------

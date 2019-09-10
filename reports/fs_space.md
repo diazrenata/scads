@@ -116,10 +116,36 @@ Higher values indicate more even vectors; note the color scale is reversed. (Bas
 
 ![](fs_space_files/figure-markdown_github/evar-1.png)
 
-![](fs_space_files/figure-markdown_github/skew-1.png)![](fs_space_files/figure-markdown_github/skew-2.png)
+### Skewness
 
-There seems to be some relationship to skewness - skewness locates you in a particular part of the state space. Not sure what that means.
+#### Skewness - abundance
 
-![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-1.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-2.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-3.png)
+The y axis is abundance; colors correspond to skewness. The most and least skewed vectors are highlighted with thicker, less transparent lines. The red dots mark the Portal vector. ![](fs_space_files/figure-markdown_github/sabund%20skew-1.png)
+
+#### Coefficients-skew plot
+
+The y axis is the coefficient values; colors correspond to skewness with the most and least skewed vectors highlighted. The red dots mark the Portal coefficients.
+
+![](fs_space_files/figure-markdown_github/coefficients%20skew-1.png)
+
+There seems to be some relationship to skewness - skewness locates you in a particular part of the state space. I'm not sure what that means....
+
+#### Comparing skewness to distance from centroid
+
+The x axis is skewness and the y axis is the distance of the coefficients to the centroid. Each dot is a draw from the feasible set.
+
+![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-1.png)
+
+#### Comparing rank skewness to rank distance from centroid
+
+The x axis is a vector's ranked skewness and the y axis is the ranked distance of the coefficients to the centroid. Each dot is a draw from the feasible set. The orange line is the 1:1 line.
+
+![](fs_space_files/figure-markdown_github/compare%20skewness%20to%20rank%20distance-1.png)
+
+#### Comparing distribution of skewness values to distance values
+
+The red dot on the skewness plot is Portal.
+
+![](fs_space_files/figure-markdown_github/skew%20violin%20plot-1.png)
 
 Skewness is not equivalent to centroid distance.
