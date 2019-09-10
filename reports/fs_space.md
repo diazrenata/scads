@@ -2,6 +2,7 @@ Mapping FS space
 ================
 
 ``` r
+knitr::opts_chunk$set(echo = FALSE)
 library(dplyr)
 ```
 
@@ -19,48 +20,106 @@ library(dplyr)
 ``` r
 library(scads)
 library(ggplot2)
-dataset <- "plants"
-knitr::opts_chunk$set(echo = FALSE)
+dataset <- "small"
 ```
 
     ## Loading in data version 1.127.0
 
-![](fs_space_files/figure-markdown_github/density%20plot%20perhaps-1.png)
+This report is for Portal control rodents 1990-95, 100 draws.
+=============================================================
+
+Density plots of raw rank abundances
+------------------------------------
+
+The y-axes are abundance (on the left) and relative abundance (on the right). Each black dot is an abundance value from a vector drawn from the feasible set. The red line plots the distribution from Portal.
+
+The black dots are semi-transparent, which makes it a little easier to see the density distribution.
 
 The rescaled vectors (on the right) are what go into Legendre approximation. In this case, these plots should look identical, because all the draws from the feasible set have the same number of individuals as the Portal vector. I have at other times compared SADs without the total abundance constraint, where the rescaled plots could look quite different.
 
+![](fs_space_files/figure-markdown_github/plot%20rads%20and%20rescaled%20rads-1.png)
+
     ## Loading required package: polynom
+
+Density plots of coeffiients from Legendre approximation
+--------------------------------------------------------
+
+The y-axis is the value of the coefficient for each Legendre polynomial. Each black dot is a value for a draw from the feasible set.
+
+The green line marks the centroid of the coefficients for the draws from the feasible set. The red line marks the coefficients for the Portal vector.
 
 ![](fs_space_files/figure-markdown_github/distance%20to%20centroid-1.png)
 
-The green line marks the centroid, and the red line marks the Portal estimation values.
+True values compared to estimations via Legendre coefficients
+-------------------------------------------------------------
 
-    ## Warning: Removed 1 rows containing missing values (geom_point).
+Here we are reconstructing the scaled SAD from the approximated coefficients. The y-axis is the scaled abundance or estimated scaled abundance. The hollow points are estimates from approximation with 8 polynomials, and the stars are the true values.
+
+There is no true value for the centroid, but `closest_fs` is the element of the feasible set with the lowest euclidean distance between its coefficients and the centroid coefficients. `farthest_fs` is the element of the feasible set with the largest distance between its coefficients and the centroid coefficients.
 
     ## Warning: Removed 1 rows containing missing values (geom_point).
 
 ![](fs_space_files/figure-markdown_github/generate%20from%20centroid,%20empirical-1.png)
 
-Here we are reconstructing the scaled SAD from the approximated coefficients. The hollow points are estimates from approximation with 8 polynomials, and the stars mark the true values. Using 8 polynomials for a 10-species vector gives us extremely low SSQE. There is no real value for the centroid, but `closest_fs` is the element of the feasible set with the lowest euclidean distance between its coefficients and the centroid coefficients.
+Distribution of coefficient distances from the centroid
+-------------------------------------------------------
+
+Violin/density plot of the Euclidean distance between the centroid coefficients and the coefficients for draws from the feasible set. The violin is for all draws from the feasible set. The black dots are individual draws. The colored dots are for the closest and farthest (from the centroid) elements of the feasible set, and for Portal.
 
 ![](fs_space_files/figure-markdown_github/dist%20to%20centroid%20plot-1.png)
 
-![](fs_space_files/figure-markdown_github/heatmap-1.png)
+Heat map of RADs, shaded by distance to the centroid
+----------------------------------------------------
 
-![](fs_space_files/figure-markdown_github/linecloud-1.png)
+The y axis is scaled abundance. Each line marks one draw from the feasible set. The colors (`qbin`) map the percentile of the *Euclidean distance between the draw's coefficients and the centroid of the coefficients*. Purpley-pink colors are closer to the centroid; orange to yellow are far. The 3 farthest draws are marked with thicker and less transparent lines. The red dots are the values from Portal.
 
-![](fs_space_files/figure-markdown_github/coefficients%20linecloud-1.png)
+![](fs_space_files/figure-markdown_github/sabund%20plus%20empirical%20linecloud-1.png)
 
-![](fs_space_files/figure-markdown_github/add%20some%20rats-1.png)![](fs_space_files/figure-markdown_github/add%20some%20rats-2.png)
+Heat map of coefficients, shaded by distance to the centroid
+------------------------------------------------------------
+
+The y-axis is coefficient values, and the x axis is each coefficient. As above, each line marks the coefficients for a single draw, and lines are shaded according to the distance to the centroid. The red dots are the coefficients for Portal.
+
+![](fs_space_files/figure-markdown_github/coefficients%20plus%20empirical%20linecloud-1.png)
+
+Comparing coefficients centroid to abundance centroid
+-----------------------------------------------------
+
+It seems possible that the Legendre coefficients might just reproduce the same information that is in the abundance values. So I calculated a few things based on the centroid *of the scaled abundance values* rather than the centroid of the coefficients.
+
+### Prediction from centroid coefficient vs. centroid of abundance values
+
+The yellow line is the centroid *of the scaled abundance values* (not the coefficients). The estimate from the centroid of the coefficients (black line and points) almost exactly matches.
 
 ![](fs_space_files/figure-markdown_github/raw%20abundance%20centroid-1.png)
 
-![](fs_space_files/figure-markdown_github/obs%20pred%20plots-1.png)
+### Distances calculated from coefficient centroid vs abundance centroid
 
-![](fs_space_files/figure-markdown_github/evar-1.png)![](fs_space_files/figure-markdown_github/evar-2.png)![](fs_space_files/figure-markdown_github/evar-3.png)
+Each dot is draw from the feasible set. The x axis is the distance from the centroid of the abundance values. The y axis is the distance from the centroid of the coefficients. The yellow line is 1:1. The centroid values are generally smaller than the abundance values.
+
+![](fs_space_files/figure-markdown_github/obs%20pred%20distance-1.png)
+
+### Rank distance calculated from coefficient centroid vs abundance centroid
+
+Each dot is draw from the feasible set. The x axis is the rank of a draw's distance from the centroid of the abundance values. The y axis is the rank of that draw's distance from the centroid of the coefficients. The yellow line is 1:1. There's a relationship, but a *lot* of scatter.
+
+![](fs_space_files/figure-markdown_github/obs%20pred%20rank-1.png)
+
+Comparing coefficient distance to other metrics
+-----------------------------------------------
+
+Do the coefficients, or the coefficient-centroid distances, recapitulate more longstanding metrics? I tried evar and skewness.
+
+### Evar
+
+Higher values indicate more even vectors; note the color scale is reversed. (Based on exploration, I expect lower evenness values to be at the edges). The red dots are the Portal vector. `evar` for the Portal vector is 0.1208898.
+
+![](fs_space_files/figure-markdown_github/evar-1.png)
+
+![](fs_space_files/figure-markdown_github/skew-1.png)![](fs_space_files/figure-markdown_github/skew-2.png)
 
 There seems to be some relationship to skewness - skewness locates you in a particular part of the state space. Not sure what that means.
 
-![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-1.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-2.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-3.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-4.png)
+![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-1.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-2.png)![](fs_space_files/figure-markdown_github/compare%20skew%20to%20distance-3.png)
 
 Skewness is not equivalent to centroid distance.

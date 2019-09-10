@@ -4,11 +4,11 @@ output: github_document
 ---
 
 ```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
 library(dplyr)
 library(scads)
 library(ggplot2)
-dataset <- "plants"
-knitr::opts_chunk$set(echo = FALSE)
+dataset <- "small"
 ```
 
 ```{r get an SAD}
@@ -80,12 +80,16 @@ save(fs_bank, file = "fs_bank_94.Rds")
 
 if(dataset == "plants") {
   load(here::here("fs_bank_plants.Rds"))
+  nametoprint <- "Portal winter annuals 1994, 10000 draws"
 } else if(dataset == "rodents94") {
   load(here::here("fs_bank_94.Rds"))
+  nametoprint <- "Portal control rodents 1994, 10000 draws"
 } else if(dataset == "small") {
   load(here::here("fs_bank_small.Rds"))
+  nametoprint <- "Portal control rodents 1990-95, 100 draws"
 } else {
   load(here::here("fs_bank.Rds"))
+  nametoprint <- "Portal control rodents 1990=95, 10000 draws"
 }
 
 ```
@@ -99,7 +103,18 @@ fs_bank_M <- fs_bank %>%
 
 ```
 
-```{r density plot perhaps}
+
+# This report is for `r nametoprint`. 
+
+## Density plots of raw rank abundances
+
+The y-axes are abundance (on the left) and relative abundance (on the right). Each black dot is an abundance value from a vector drawn from the feasible set. The red line plots the distribution from Portal.
+
+The black dots are semi-transparent, which makes it a little easier to see the density distribution.
+
+The rescaled vectors (on the right) are what go into Legendre approximation. In this case, these plots should look identical, because all the draws from the feasible set have the same number of individuals as the Portal vector. I have at other times compared SADs without the total abundance constraint, where the rescaled plots could look quite different.
+
+```{r plot rads and rescaled rads, fig.width = 10}
 fs_dp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = abund)) + 
   geom_point(alpha = .2, size = 1) +
   geom_line(data = portal_sad, aes(x = rank, y = abund), alpha = .5, color = "red") +
@@ -122,9 +137,7 @@ gridExtra::grid.arrange(grobs = list(fs_dp, fs_sdp), nrow = 1)
 ```
 
 
-The rescaled vectors (on the right) are what go into Legendre approximation. In this case, these plots should look identical, because all the draws from the feasible set have the same number of individuals as the Portal vector. I have at other times compared SADs without the total abundance constraint, where the rescaled plots could look quite different.
-
-```{r get and plot leg approximation}
+```{r calculations for leg approximation}
 
 fs_leg_coeffs <- apply(as.matrix(1:ncol(fs_bank)), MARGIN = 1, 
                        FUN = function(sim_index, fs_bank_M) 
@@ -147,6 +160,13 @@ coeffs_plot <- ggplot(data = fs_leg_coeffs_M, aes(x = coeff_name, y = coeff_valu
 
 ```
 
+
+## Density plots of coeffiients from Legendre approximation
+
+The y-axis is the value of the coefficient for each Legendre polynomial. Each black dot is a value for a draw from the feasible set. 
+
+The green line marks the centroid of the coefficients for the draws from the feasible set. The red line marks the coefficients for the Portal vector. 
+
 ```{r distance to centroid}
 
 fs_centroid <- fs_leg_coeffs_M %>%
@@ -165,7 +185,14 @@ coeffs_c_plot <- coeffs_plot +
 coeffs_c_plot
 ```
 
-The green line marks the centroid, and the red line marks the Portal estimation values. 
+
+## True values compared to estimations via Legendre coefficients
+
+
+Here we are reconstructing the scaled SAD from the approximated coefficients. The y-axis is the scaled abundance or estimated scaled abundance. The hollow points are estimates from approximation with `r nleg` polynomials, and the stars are the true values. 
+
+There is no true value for the centroid, but `closest_fs` is the element of the feasible set with the lowest euclidean distance between its coefficients and the centroid coefficients. `farthest_fs` is the element of the feasible set with the largest distance between its coefficients and the centroid coefficients.  
+
 
 ```{r generate from centroid, empirical}
 fs_dist <- fs_leg_coeffs_M %>%
@@ -204,7 +231,7 @@ ssqes <- data.frame(
 estimates_plot <- ggplot(data = estimates_df, aes(x = rank, y = est_abund, color = source)) +
   geom_point(shape = 1) +
   geom_point(data = true_sads, aes(x = rank, y = sabund, color = source), shape = 8) +
-  geom_label(data = ssqes, aes(x = 2, y = c(.95, .87, .8, .73), label = paste0("ssqe: ", format(signif(ssqe, 2), scientific = FALSE)), color = source), show.legend = FALSE) +
+  geom_label(data = ssqes, aes(x = 4, y = c(.95, .87, .8, .73), label = paste0("ssqe: ", format(signif(ssqe, 2), scientific = FALSE)), color = source), show.legend = FALSE) +
   scale_colour_viridis_d(end = .8, option = "C") +
   theme_bw() +
   ylim(0, 1)
@@ -212,7 +239,10 @@ estimates_plot <- ggplot(data = estimates_df, aes(x = rank, y = est_abund, color
 estimates_plot
 ```
 
-Here we are reconstructing the scaled SAD from the approximated coefficients. The hollow points are estimates from approximation with 8 polynomials, and the stars mark the true values. Using 8 polynomials for a 10-species vector gives us extremely low SSQE. There is no real value for the centroid, but `closest_fs` is the element of the feasible set with the lowest euclidean distance between its coefficients and the centroid coefficients. 
+
+## Distribution of coefficient distances from the centroid
+
+Violin/density plot of the Euclidean distance between the centroid coefficients and the coefficients for draws from the feasible set. The violin is for all draws from the feasible set. The black dots are individual draws. The colored dots are for the closest and farthest (from the centroid) elements of the feasible set, and for Portal. 
 
 ```{r dist to centroid plot}
 all_dist <- fs_dist %>%
@@ -243,9 +273,7 @@ centroid_dist_plot
 ```
 
 
-
-
-```{r heatmap, fig.height=8, fig.width = 18}
+```{r sabund heatmap, fig.height=8, fig.width = 18, include = F}
 
 fs_bank_M <- left_join(fs_bank_M, select(fs_dist, sim, centroid_dist), by = "sim")
 
@@ -274,7 +302,7 @@ fs_bank_M <- fs_bank_M %>%
 
 ```
 
-```{r linecloud}
+```{r sabund linecloud, include = F}
 
 fs_bank_linecloud <- fs_bank_M %>%
   select(sim, centroid_dist) %>%
@@ -295,7 +323,7 @@ linecloud
 
 ```
 
-```{r coefficients linecloud}
+```{r coefficients linecloud, include = F}
 
 fs_coeffs_cloud <- left_join(fs_leg_coeffs_M, 
                              distinct(select(fs_bank_linecloud, 
@@ -314,13 +342,24 @@ fs_coeffs_linecloud
 
 ```
 
-```{r add some rats}
+## Heat map of RADs, shaded by distance to the centroid
+
+The y axis is scaled abundance. Each line marks one draw from the feasible set. The colors (`qbin`) map the percentile of the _Euclidean distance between the draw's coefficients and the centroid of the coefficients_. Purpley-pink colors are closer to the centroid; orange to yellow are far. The 3 farthest draws are marked with thicker and less transparent lines. The red dots are the values from Portal. 
+
+```{r sabund plus empirical linecloud}
 
 emp_linecloud <- linecloud +
   geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
 
 emp_linecloud
+```
 
+
+## Heat map of coefficients, shaded by distance to the centroid
+
+The y-axis is coefficient values, and the x axis is each coefficient. As above, each line marks the coefficients for a single draw, and lines are shaded according to the distance to the centroid. The red dots are the coefficients for Portal.
+
+```{r coefficients plus empirical linecloud}
 emp_coeff_linecloud <- fs_coeffs_linecloud +
   geom_point(data = mutate(portal_leg_coeffs, sim = 1, qbin = 0, qbin_alpha = 1),
              aes(x =coeff_index, y= coeff_value),  color = "#FF0000", show.legend = F)
@@ -328,6 +367,14 @@ emp_coeff_linecloud <- fs_coeffs_linecloud +
 emp_coeff_linecloud
 
 ```
+
+## Comparing coefficients centroid to abundance centroid
+
+It seems possible that the Legendre coefficients might just reproduce the same information that is in the abundance values. So I calculated a few things based on the centroid _of the scaled abundance values_ rather than the centroid of the coefficients. 
+
+### Prediction from centroid coefficient vs. centroid of abundance values
+
+The yellow line is the centroid _of the scaled abundance values_ (not the coefficients). The estimate from the centroid of the coefficients (black line and points) almost exactly matches. 
 
 ```{r raw abundance centroid}
 
@@ -349,7 +396,11 @@ raw_centroid <- ggplot(data = raw_abund_centroid, aes(x = rank, y = abund, color
 raw_centroid
 ```
 
-```{r obs pred plots, fig.height = 8, fig.width = 4}
+### Distances calculated from coefficient centroid vs abundance centroid
+
+Each dot is draw from the feasible set. The x axis is the distance from the centroid of the abundance values. The y axis is the distance from the centroid of the coefficients. The yellow line is 1:1. The centroid values are generally smaller than the abundance values. 
+
+```{r obs pred distance, fig.height = 4, fig.width = 4}
 
 fs_raw_dist <- fs_bank_M %>%
   select(rank, sim, sabund) %>%
@@ -366,15 +417,34 @@ raw_coeff_plot <- ggplot(data = fs_raw_dist, aes(x = rawdist, y = centroid_dist)
   geom_line(data = data.frame(x = seq(min(c(fs_raw_dist$rawdist, fs_raw_dist$centroid_dist)), max(c(fs_raw_dist$rawdist, fs_raw_dist$centroid_dist)), length.out = 10)), aes(x = x, y = x), color = "orange") +
   theme_bw()
 
+raw_coeff_plot
+```
+
+
+### Rank distance calculated from coefficient centroid vs abundance centroid
+
+Each dot is draw from the feasible set. The x axis is the rank of a draw's distance from the centroid of the abundance values. The y axis is the rank of that draw's distance from the centroid of the coefficients. The yellow line is 1:1. There's a relationship, but a *lot* of scatter. 
+
+
+```{r obs pred rank, fig.height=4, fig.width = 4}
 raw_coeff_rank_plot <- ggplot(data = fs_raw_dist, aes(x = raw_sim_rank, y = sim_rank)) +
   geom_point() +
   geom_line(data = data.frame(x = seq(min(c(fs_raw_dist$raw_sim_rank, fs_raw_dist$sim_rank)), max(c(fs_raw_dist$raw_sim_rank, fs_raw_dist$sim_rank)), length.out = 10)), aes(x = x, y = x), color = "orange") +
   theme_bw()
 
-gridExtra::grid.arrange(grobs = list(raw_coeff_plot, raw_coeff_rank_plot))
+raw_coeff_rank_plot
 
 
 ```
+
+
+## Comparing coefficient distance to other metrics
+
+Do the coefficients, or the coefficient-centroid distances, recapitulate more longstanding metrics? I tried evar and skewness. 
+
+### Evar
+
+Higher values indicate more even vectors; note the color scale is reversed. (Based on exploration, I expect lower evenness values to be at the edges). The red dots are the Portal vector. `evar` for the Portal vector is `r conditionalsads::evar(portal_sad$sabund)`. 
 
 ```{r evar}
 
@@ -387,14 +457,21 @@ fs_bank_mets <- fs_bank_M %>%
 
 evar_plot <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = evar, group = sim)) +
   geom_line(size = .1, alpha = .2) +
-  geom_line(data = filter(fs_bank_mets, evar <= quantile(fs_bank_mets$evar, probs = .001)[1]), alpha = .5, size = .5) +
-  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  geom_line(data = filter(fs_bank_mets, evar <= quantile(fs_bank_mets$evar, probs = .003)[1]), alpha = .5, size = .5) +
+  scale_colour_viridis_c(option = "plasma", end = .8, direction = -1) + 
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F) + 
   theme_bw() +
   theme(legend.position = "top")
 
 evar_plot
+```
 
+### Skewness
 
+#### Skewness - abundance 
+
+The y axis is abundance; colors correspond to skewness. The most and least skewed vectors are highlighted with thicker, less transparent lines. The red dots mark the Portal vector. 
+```{r sabund skew}
 skew_plot <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = skew, group = sim)) +
   geom_line(size = .1, alpha = .2) +
   geom_line(data = filter(fs_bank_mets, skew <= quantile(fs_bank_mets$skew, probs = .001)[1]), alpha = .5, size = .3) + 
@@ -405,6 +482,15 @@ skew_plot <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = skew,
   geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
 
 skew_plot
+
+```
+
+#### Coefficients-skew plot
+
+The y axis is the coefficient values; colors correspond to skewness with the most and least skewed vectors highlighted. The red dots mark the Portal coefficients. 
+
+
+```{r coefficients skew}
 
 coeffs_skew <- fs_bank_mets %>%
   select(sim, skew) %>%
@@ -425,7 +511,11 @@ coeffs_skew_plot <- ggplot(data = coeffs_skew, aes(x = coeff_index, y = coeff_va
 coeffs_skew_plot
 ```
 
-There seems to be some relationship to skewness - skewness locates you in a particular part of the state space. Not sure what that means. 
+There seems to be some relationship to skewness - skewness locates you in a particular part of the state space. I'm not sure what that means....
+
+#### Comparing skewness to distance from centroid
+
+The x axis is skewness and the y axis is the distance of the coefficients to the centroid. Each dot is a draw from the feasible set.  
 
 ```{r compare skew to distance}
 skew_distance <- coeffs_skew %>%
@@ -437,21 +527,41 @@ skew_distance <- coeffs_skew %>%
   rename(dist_rank = sim_rank)
 
 skd_plot <- ggplot(data = skew_distance, aes(x = skew, y = centroid_dist)) +
-  geom_point()
+  geom_point() +
+  theme_bw()
+  
 
 skd_plot
+```
+
+
+#### Comparing rank skewness to rank distance from centroid
+
+The x axis is a vector's ranked skewness and the y axis is the ranked distance of the coefficients to the centroid. Each dot is a draw from the feasible set. The orange line is the 1:1 line.
+
+
+```{r compare skewness to rank distance}
 
 skd_rank_plot <- ggplot(data = skew_distance, aes(x = skew_rank, y = dist_rank)) + 
-  geom_point()
+  geom_point() +
+  theme_bw() +
+  geom_line(aes(x = 1:max(skew_rank), y = 1:max(skew_rank)), color ="orange")
 
 skd_rank_plot
 
+```
+
+#### Comparing distribution of skewness values to distance values
+
+The red dot on the skewness plot is Portal.
+
+```{r skew violin plot}
 skew_violin <- ggplot(data = skew_distance, aes(x = 0, y = skew)) +
   geom_violin() +
-  geom_point(aes(x = 0, y = conditionalsads::rad_skew(portal_sad$sabund)))
-skew_violin
+  geom_point(aes(x = 0, y = conditionalsads::rad_skew(portal_sad$sabund)), color = "red") +
+  theme_bw()
 
-gridExtra::grid.arrange(grobs = list(skew_violin, centroid_dist_plot))
+gridExtra::grid.arrange(grobs = list(skew_violin, centroid_dist_plot), nrow = 1)
 ```
 
 Skewness is not equivalent to centroid distance. 
