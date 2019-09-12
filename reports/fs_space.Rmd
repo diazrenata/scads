@@ -530,7 +530,7 @@ skew_distance <- coeffs_skew %>%
 skd_plot <- ggplot(data = skew_distance, aes(x = skew, y = centroid_dist)) +
   geom_point() +
   theme_bw()
-  
+
 
 skd_plot
 ```
@@ -572,3 +572,44 @@ skew_rank_percentile <- filter(skew_distance, skew <= conditionalsads::rad_skew(
 ```
 
 Portal is *very* skewed compared to the bulk of the feasible set. Portal's skewness is `r conditionalsads::rad_skew(portal_sad$sabund)`, which is more skewed than `r (nrow(skew_rank_percentile) / nrow(skew_distance)) * 100`% of the feasible set. 
+
+```{r coefficients skew 2}
+
+coeffs_skew <- fs_bank_mets %>%
+  select(sim, skew) %>%
+  distinct() %>%
+  right_join(fs_leg_coeffs_M, by = "sim")  %>%
+  select(sim, skew, coeff_value, coeff_index) %>%
+  group_by(sim, skew) %>%
+  mutate(coeff_sd = sd(coeff_value)) %>%
+  ungroup() 
+
+coeffs_skew_ranked <- coeffs_skew %>%
+  select(sim, skew, coeff_sd) %>%
+  distinct() %>%
+  arrange(skew) %>%
+  mutate(abund_skew_rank = row_number()) %>%
+  arrange(coeff_sd) %>%
+  mutate(coeff_sd_rank = row_number()) %>%
+  ungroup()
+
+coeff_sd_plot <- ggplot(data = coeffs_skew, aes(x = coeff_index, y = coeff_value, color = coeff_sd, group = sim)) +
+  geom_line(alpha = .5) +
+  scale_color_viridis_c(end = .9) +
+  theme_bw()
+
+coeff_sd_plot
+
+rank_sd_skew_plot <- ggplot(data = coeffs_skew_ranked, aes(x = abund_skew_rank, y = coeff_sd_rank)) +
+  geom_point(alpha = .3) +
+  theme_bw()
+rank_sd_skew_plot
+
+
+sd_skew_plot <- ggplot(data = coeffs_skew_ranked, aes(x = skew, y = coeff_sd)) +
+  geom_point(alpha = .3) +
+  theme_bw() 
+
+sd_skew_plot
+
+```

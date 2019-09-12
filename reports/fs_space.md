@@ -20,13 +20,13 @@ library(dplyr)
 ``` r
 library(scads)
 library(ggplot2)
-dataset <- "small"
+dataset <- "rodents94"
 ```
 
     ## Loading in data version 1.127.0
 
-This report is for Portal control rodents 1990-95, 100 draws.
-=============================================================
+This report is for Portal control rodents 1994, 10000 draws.
+============================================================
 
 Density plots of raw rank abundances
 ------------------------------------
@@ -53,7 +53,7 @@ The green line marks the centroid of the coefficients for the draws from the fea
 True values compared to estimations via Legendre coefficients
 -------------------------------------------------------------
 
-Here we are reconstructing the scaled SAD from the approximated coefficients. The y-axis is the scaled abundance or estimated scaled abundance. The hollow points are estimates from approximation with 8 polynomials, and the stars are the true values.
+Here we are reconstructing the scaled SAD from the approximated coefficients. The y-axis is the scaled abundance or estimated scaled abundance. The hollow points are estimates from approximation with 5 polynomials, and the stars are the true values.
 
 There is no true value for the centroid, but `closest_fs` is the element of the feasible set with the lowest euclidean distance between its coefficients and the centroid coefficients. `farthest_fs` is the element of the feasible set with the largest distance between its coefficients and the centroid coefficients.
 
@@ -112,7 +112,7 @@ Do the coefficients, or the coefficient-centroid distances, recapitulate more lo
 
 ### Evar
 
-Higher values indicate more even vectors; note the color scale is reversed. (Based on exploration, I expect lower evenness values to be at the edges). The red dots are the Portal vector. `evar` for the Portal vector is 0.1208898.
+Higher values indicate more even vectors; note the color scale is reversed. (Based on exploration, I expect lower evenness values to be at the edges). The red dots are the Portal vector. `evar` for the Portal vector is 0.2752416.
 
 ![](fs_space_files/figure-markdown_github/evar-1.png)
 
@@ -150,4 +150,6 @@ The red dot on the skewness plot is Portal.
 
 Skewness is not equivalent to centroid distance.
 
-Portal is *very* skewed compared to the bulk of the feasible set. Portal's skewness is 2.1288833, which is more skewed than 98% of the feasible set.
+Portal is *very* skewed compared to the bulk of the feasible set. Portal's skewness is 1.3419342, which is more skewed than 99.519856% of the feasible set.
+
+![](fs_space_files/figure-markdown_github/coefficients%20skew%202-1.png)![](fs_space_files/figure-markdown_github/coefficients%20skew%202-2.png)![](fs_space_files/figure-markdown_github/coefficients%20skew%202-3.png)
