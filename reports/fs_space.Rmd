@@ -454,7 +454,16 @@ fs_bank_mets <- fs_bank_M %>%
   group_by(sim) %>%
   mutate(evar = conditionalsads::evar(sabund),
          skew =  conditionalsads::rad_skew(sabund)) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(skew_rounded = round(skew, digits = 4))
+
+skr <- fs_bank_mets %>%
+  select(sim, skew) %>%
+  distinct() %>%
+  arrange(skew) %>%
+  mutate(skew_rank = row_number())
+
+fs_bank_mets <- left_join(fs_bank_mets, skr, by = c("sim", "skew"))
 
 
 evar_plot <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = evar, group = sim)) +
@@ -484,6 +493,36 @@ skew_plot <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = skew,
   geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
 
 skew_plot
+
+skew_plot2 <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = skew_rounded, group = sim)) +
+  geom_line(size = .1, alpha = .2) +
+  geom_line(data = filter(fs_bank_mets, skew <= quantile(fs_bank_mets$skew, probs = .001)[1]), alpha = .5, size = .3) + 
+  geom_line(data = filter(fs_bank_mets, skew >= quantile(fs_bank_mets$skew, probs = 0.999)[1]), alpha = .5, size = .3) +
+  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top") +
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
+
+skew_plot2
+
+skew_plot3 <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = skew_rank, group = sim)) +
+  geom_line(size = .1, alpha = .2) +
+  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top") +
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
+
+skew_plot3
+
+
+dominants <- fs_bank_mets %>%
+  filter(rank == nspp)
+
+dominants_skew_plot <- ggplot(data = dominants, aes(x = sabund, y = skew)) +
+  geom_point(alpha = .3) + 
+  theme_bw()
+
+dominants_skew_plot
 
 ```
 

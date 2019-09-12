@@ -120,7 +120,7 @@ Higher values indicate more even vectors; note the color scale is reversed. (Bas
 
 #### Skewness - abundance
 
-The y axis is abundance; colors correspond to skewness. The most and least skewed vectors are highlighted with thicker, less transparent lines. The red dots mark the Portal vector. ![](fs_space_files/figure-markdown_github/sabund%20skew-1.png)
+The y axis is abundance; colors correspond to skewness. The most and least skewed vectors are highlighted with thicker, less transparent lines. The red dots mark the Portal vector. ![](fs_space_files/figure-markdown_github/sabund%20skew-1.png)![](fs_space_files/figure-markdown_github/sabund%20skew-2.png)![](fs_space_files/figure-markdown_github/sabund%20skew-3.png)![](fs_space_files/figure-markdown_github/sabund%20skew-4.png)
 
 #### Coefficients-skew plot
 
