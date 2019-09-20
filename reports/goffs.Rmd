@@ -8,7 +8,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(dplyr)
 library(scads)
 library(ggplot2)
-dataset <- "large"
+dataset <- "plants"
 ```
 
 ```{r get an SAD}
@@ -237,4 +237,64 @@ densityPoilog
 
 ## Negative binomial
 
+```{r negbin}
 negbin_bestfit <- fitdistrplus::fitdist(portal_sad$abund, distr = "nbinom") 
+
+negbin_pars <- coef(negbin_bestfit)
+
+negbinFit <- fs_bank_M %>%
+  group_by(sim, source) %>%
+  summarize(ll = sum(dnbinom(abund, size = negbin_pars["size"], mu = negbin_pars["mu"], log = TRUE))) %>%
+  ungroup()
+
+negbinPercentile <- 100 * (sum( filter(negbinFit, source == "sampled")$ll <= filter(negbinFit, source == "observed")$ll[1]) / max(negbinFit$sim))
+
+negbinViolin <- ggplot(data = negbinFit, aes(x = 0, y = ll, color = source)) +
+  geom_violin(data = filter(negbinFit, source == "sampled")) +
+  geom_point(data = filter(negbinFit, source == "observed")) +
+  theme_bw() +
+  scale_color_viridis_d(begin = .3, end = .8) +
+  ylab(label = "Loglikelihood of sample coming from negative binomial") +
+  ggtitle("Negative binomial loglikelihood", subtitle = paste0("Empirical percentile: ", signif(negbinPercentile, 5)))
+
+negbinViolin
+
+
+sv <- FALSE
+
+while(!sv) {
+  abund_nb <- rnbinom(n = nspp, size = negbin_pars["size"], mu = negbin_pars["mu"])
+  if(all(
+    (sum(abund_nb) == nind),
+    (length(abund_nb) == nspp))) {
+    sv <- TRUE
+    }
+}
+
+
+
+fs_bank_NB <- data.frame(
+   abund = sort(abund_nb),
+  rank = 1:nspp,
+  sim = -100,
+  source = "Negative binomial",
+  stringsAsFactors = F
+) %>%
+  bind_rows(fs_bank_M)
+
+
+densityNB <- ggplot(data = fs_bank_NB, aes(x =rank, y = abund, color = source, group = sim)) +
+  geom_line(data = filter(fs_bank_NB, source == "sampled"), alpha = .05, size = .25) +
+  geom_line(data = filter(fs_bank_NB, source != "sampled"),  alpha = .75, size = .85) +
+  theme_bw() +
+  ggtitle("Abundance: samples from FS vs observed and negative binomial") +
+  scale_color_viridis_d(end = .8)
+
+densityNB
+
+```
+
+So I'm unsure if it's more appropriate to use the same parameters for the loglikelihood of the FS samples vs the empirical ones; I can see an argument for comparing each element to *its* parameters of best fit. Especially given that, for this example at least, *all* the distributions perform very well. This analysis is generous in that direction, and I would like to know if a more strict test would concur. 
+
+The METE one is most compelling, at this stage, because the logseries is fit using only S and N and is therefore the same for the observed and all sampled vectors. 
+

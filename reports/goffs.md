@@ -20,13 +20,13 @@ library(dplyr)
 ``` r
 library(scads)
 library(ggplot2)
-dataset <- "large"
+dataset <- "plants"
 ```
 
     ## Loading in data version 1.127.0
 
-This report is for Portal control rodents 1990=95, 10000 draws.
-===============================================================
+This report is for Portal winter annuals 1994, 10000 draws.
+===========================================================
 
 Density plots of raw rank abundances
 ------------------------------------
@@ -44,11 +44,18 @@ What is the likelihood of the empirical vector coming from the best fit log seri
 
 ![](goffs_files/figure-markdown_github/logseries-1.png)![](goffs_files/figure-markdown_github/logseries-2.png)
 
-So for this example, the empirical has a higher likelihood of coming from the METE prediction (Fisher logseries, which can be parameterized using S and N) than `99.97`% of the feasible set. I *think* this means the predicted distribution is predicting information over and above the general shape forced by the feasible set. But I would like as many nth opinions as I can get.
+So for this example, the empirical has a higher likelihood of coming from the METE prediction (Fisher logseries, which can be parameterized using S and N) than `100`% of the feasible set. I *think* this means the predicted distribution is predicting information over and above the general shape forced by the feasible set. But I would like as many nth opinions as I can get.
 
 Poilog
 ------
 
-![](goffs_files/figure-markdown_github/poilog-1.png)![](goffs_files/figure-markdown_github/poilog-2.png) \#\# Negative binomial
+![](goffs_files/figure-markdown_github/poilog-1.png)![](goffs_files/figure-markdown_github/poilog-2.png)
 
-negbin\_bestfit &lt;- fitdistrplus::fitdist(portal\_sad$abund, distr = "nbinom")
+Negative binomial
+-----------------
+
+![](goffs_files/figure-markdown_github/negbin-1.png)![](goffs_files/figure-markdown_github/negbin-2.png)
+
+So I'm unsure if it's more appropriate to use the same parameters for the loglikelihood of the FS samples vs the empirical ones; I can see an argument for comparing each element to *its* parameters of best fit. Especially given that, for this example at least, *all* the distributions perform very well. This analysis is generous in that direction, and I would like to know if a more strict test would concur.
+
+The METE one is most compelling, at this stage, because the logseries is fit using only S and N and is therefore the same for the observed and all sampled vectors.
