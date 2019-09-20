@@ -1,0 +1,84 @@
+---
+title: "Sensitivity of skewness to singletons"
+output: github_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(scads)
+library(ggplot2)
+```
+
+```{r get an SAD}
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+
+nspp = length(portal_sad)
+nind = sum(portal_sad)
+
+portal_sad <- data.frame(
+  abund = portal_sad,
+  source = "emp",
+  rank = 1:length(portal_sad)
+)
+
+```
+
+```{r get a BUNCH of fs samples, eval = F, include=T}
+
+fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
+save(fs_bank, file = "fs_bank_94.Rds")
+
+```
+
+```{r load fs bank}
+  load(here::here("fs_bank.Rds"))
+  nametoprint <- "Portal control rodents 1990=95, 10000 draws"
+```
+
+```{r manip fs_bank}
+fs_bank_M <- fs_bank %>%
+  as.data.frame() %>%
+  mutate(rank = row_number()) %>%
+  tidyr::gather(-rank, key = "sim", value = "abund") %>%
+  mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
+
+```
+
+
+# This report is for `r nametoprint`. 
+
+## Density plots of raw rank abundances
+Each black dot is an abundance value from a vector drawn from the feasible set. The red line plots the distribution from Portal.
+
+The black dots are semi-transparent, which makes it a little easier to see the density distribution.
+
+```{r plot rads and rescaled rads, fig.width = 10}
+fs_dp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = abund)) + 
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_sad, aes(x = rank, y = abund), alpha = .5, color = "red") +
+  theme_bw() +
+  ggtitle("Abundance: draws from FS vs Portal")
+fs_dp
+```
+
+
+```{r nb singletons}
+nb_singles <- nrow(filter(portal_sad, abund == 1))
+```
+
+There are ```r nb_singles``` singleton species in the true empirical vector. 
+
+
+
+In thinking about how to set up perturbing the number of singletons, I'm starting to think this is a medium-scale drake problem. I might punt it to a branch of diazrenata/plantscads.
