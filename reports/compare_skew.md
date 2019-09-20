@@ -51,3 +51,10 @@ Skewness algorithms
 Are literally all of the ranks exactly the same?
 
     ## [1] TRUE
+
+Skewness v Evar
+---------------
+
+![](compare_skew_files/figure-markdown_github/add%20evar-1.png)
+
+    ## [1] FALSE

@@ -140,7 +140,8 @@ fs_bank_skews <- fs_bank_M %>%
   group_by(sim, source) %>%
   summarize(skew_1 = e1071::skewness(abund, type = 1),
             skew_2 = e1071::skewness(abund, type = 2),
-            skew_3 = e1071::skewness(abund, type = 3)) %>%
+            skew_3 = e1071::skewness(abund, type = 3),
+            evar = conditionalsads::evar(abund)) %>%
   ungroup()# %>%
   #tidyr::gather(-sim, -source, key = "skew_alg", value = "skew_val")
 
@@ -169,12 +170,14 @@ gridExtra::grid.arrange(grobs = skew_plots, nrow = 1)
 ```{r ranked skew, fig.width = 12}
 
 fs_bank_skews <- fs_bank_skews %>%
-  arrange(sort(skew_1)) %>%
+  arrange((skew_1)) %>%
   mutate(skew_1_rank = row_number()) %>%
-  arrange(sort(skew_2)) %>%
+  arrange((skew_2)) %>%
   mutate(skew_2_rank = row_number()) %>%
-  arrange(sort(skew_3)) %>%
-  mutate(skew_3_rank = row_number())
+  arrange((skew_3)) %>%
+  mutate(skew_3_rank = row_number()) %>%
+  arrange((evar)) %>%
+  mutate(evar_rank = row_number())
 
 fs_bank_rank_plots <- list()
 
@@ -206,3 +209,21 @@ all((fs_bank_skews$skew_1_rank == fs_bank_skews$skew_2_rank),
 
 ```
 
+## Skewness v Evar
+
+```{r add evar, fig.width=12}
+
+evar_skew_plot <- ggplot(data = fs_bank_skews, aes(x = skew_1, y = evar)) +
+  geom_point(alpha = .7) +
+  ggtitle("Evar v Skew 1")
+
+
+r_evar_skew_plot <- ggplot(data = fs_bank_skews, aes(x = skew_1_rank, y = evar_rank)) +
+  geom_point(alpha = .7) +
+  ggtitle("Evar v Skew 1 Rank")
+
+gridExtra::grid.arrange(grobs = list(evar_skew_plot, r_evar_skew_plot), nrow = 1)
+
+all((fs_bank_skews$skew_1_rank == fs_bank_skews$evar_rank))
+
+```
