@@ -45,3 +45,10 @@ What is the likelihood of the empirical vector coming from the best fit log seri
 ![](goffs_files/figure-markdown_github/logseries-1.png)![](goffs_files/figure-markdown_github/logseries-2.png)
 
 So for this example, the empirical has a higher likelihood of coming from the METE prediction (Fisher logseries, which can be parameterized using S and N) than `99.97`% of the feasible set. I *think* this means the predicted distribution is predicting information over and above the general shape forced by the feasible set. But I would like as many nth opinions as I can get.
+
+Poilog
+------
+
+![](goffs_files/figure-markdown_github/poilog-1.png)![](goffs_files/figure-markdown_github/poilog-2.png) \#\# Negative binomial
+
+negbin\_bestfit &lt;- fitdistrplus::fitdist(portal\_sad$abund, distr = "nbinom")

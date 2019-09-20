@@ -179,3 +179,62 @@ densityLogSeries
 
 So for this example, the empirical has a higher likelihood of coming from the METE prediction (Fisher logseries, which can be parameterized using S and N) than ```r logSeriesPercentile```% of the feasible set. I _think_ this means the predicted distribution is predicting information over and above the general shape forced by the feasible set. But I would like as many nth opinions as I can get. 
 
+## Poilog
+
+```{r poilog}
+
+pl_best_fit <- poilog::poilogMLE(portal_sad$abund)
+
+poilogFit <- fs_bank_M %>%
+  group_by(sim, source) %>%
+  summarize(ll = sum(log(poilog::dpoilog(abund, mu = pl_best_fit$par["mu"], sig = pl_best_fit$par["sig"])))) %>%
+  ungroup()
+
+poilogPercentile <- 100 * (sum( filter(poilogFit, source == "sampled")$ll <= filter(poilogFit, source == "observed")$ll[1]) / max(poilogFit$sim))
+
+logSeriesViolin <- ggplot(data = poilogFit, aes(x = 0, y = ll, color = source)) +
+  geom_violin(data = filter(poilogFit, source == "sampled")) +
+  geom_point(data = filter(poilogFit, source == "observed")) +
+  theme_bw() +
+  scale_color_viridis_d(begin = .3, end = .8) +
+  ylab(label = "Loglikelihood of sample coming from Poisson lognormal") +
+  ggtitle("Poisson lognormal loglikelihood", subtitle = paste0("Empirical percentile: ", signif(poilogPercentile, 5)))
+
+logSeriesViolin
+
+sv <- FALSE
+
+while(!sv) {
+  abund_pl <- poilog::rpoilog(S = nspp, mu = pl_best_fit$par["mu"], sig = pl_best_fit$par["sig"], keep0 = FALSE)
+  if(all(
+    (sum(abund_pl) == nind),
+    (length(abund_pl) == nspp))) {
+    sv <- TRUE
+    }
+}
+
+fs_bank_PL <- data.frame(
+   abund = sort(abund_pl),
+  rank = 1:nspp,
+  sim = -100,
+  source = "Poisson lognormal",
+  stringsAsFactors = F
+) %>%
+  bind_rows(fs_bank_M)
+
+
+densityPoilog <- ggplot(data = fs_bank_PL, aes(x =rank, y = abund, color = source, group = sim)) +
+  geom_line(data = filter(fs_bank_PL, source == "sampled"), alpha = .05, size = .25) +
+  geom_line(data = filter(fs_bank_PL, source != "sampled"),  alpha = .75, size = .85) +
+  theme_bw() +
+  ggtitle("Abundance: samples from FS vs observed and Poisson lognormal") +
+  scale_color_viridis_d(end = .8)
+
+densityPoilog
+
+
+```
+
+## Negative binomial
+
+negbin_bestfit <- fitdistrplus::fitdist(portal_sad$abund, distr = "nbinom") 
