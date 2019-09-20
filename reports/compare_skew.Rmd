@@ -1,0 +1,208 @@
+---
+title: "Comparing different skewness calculations"
+output: github_document
+---
+
+Do different methods for calculating skewness give qualitatively similar results?
+
+(For later - evenness?)
+
+```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(scads)
+library(ggplot2)
+dataset <- "plants"
+```
+
+```{r get an SAD}
+if(dataset == "plants") {
+  
+  portal_sad <- portalr::plant_abundance(level = "Treatment", type = "Winter Annuals", plots = "All", unknowns = F, correct_sp = T, shape = "flat", min_quads = 16) %>%
+    filter(treatment == "control") %>%
+    select(year, species, abundance) %>%
+    filter(year == 1994) %>%
+    select(-year) %>%
+    rename(abund = abundance) %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+
+} else if(dataset == "rodents94") {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1994))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+
+} else {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+}
+
+nspp = length(portal_sad)
+nind = sum(portal_sad)
+
+portal_sad <- data.frame(
+  abund = portal_sad,
+  source = "emp",
+  rank = 1:length(portal_sad),
+  stringsAsFactors = F
+)
+
+```
+
+```{r get a BUNCH of fs samples, eval = F, include=T}
+
+fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
+save(fs_bank, file = "fs_bank_94.Rds")
+
+```
+
+```{r load fs bank}
+
+if(dataset == "plants") {
+  load(here::here("fs_bank_plants.Rds"))
+  fs_bank <- fs_bank[, 1:10000]
+
+  nametoprint <- "Portal winter annuals 1994, 10000 draws"
+} else if(dataset == "rodents94") {
+  load(here::here("fs_bank_94.Rds"))
+  nametoprint <- "Portal control rodents 1994, 10000 draws"
+} else if(dataset == "small") {
+  load(here::here("fs_bank_small.Rds"))
+  nametoprint <- "Portal control rodents 1990-95, 100 draws"
+} else {
+  load(here::here("fs_bank.Rds"))
+  nametoprint <- "Portal control rodents 1990=95, 10000 draws"
+}
+
+```
+
+```{r manip fs_bank}
+
+fs_bank_M <- fs_bank %>%
+  as.data.frame(stringsAsFactors = F) %>%
+  mutate(rank = row_number()) %>%
+  tidyr::gather(-rank, key = "sim", value = "abund") %>%
+  mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
+
+```
+
+
+# This report is for `r nametoprint`. 
+
+## Density plots of raw rank abundances
+
+The y-axis is abundance. Each black dot is an abundance value from a vector drawn from the feasible set. The red line plots the distribution from Portal.
+
+```{r plot rads and rescaled rads, fig.width = 10}
+fs_dp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = abund)) + 
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_sad, aes(x = rank, y = abund), alpha = .5, color = "red") +
+  theme_bw() +
+  ggtitle("Abundance: draws from FS vs Portal")
+
+fs_dp
+```
+
+## Skewness algorithms
+
+`e1071` has three algorithms available for skewness. Do they give the same results?
+
+
+```{r skewness algs, fig.width = 12}
+fs_bank_M <- fs_bank_M %>%
+  mutate(source = "sampled") %>%
+  bind_rows(mutate(portal_sad, sim = -99))
+
+
+fs_bank_skews <- fs_bank_M %>%
+  group_by(sim, source) %>%
+  summarize(skew_1 = e1071::skewness(abund, type = 1),
+            skew_2 = e1071::skewness(abund, type = 2),
+            skew_3 = e1071::skewness(abund, type = 3)) %>%
+  ungroup()# %>%
+  #tidyr::gather(-sim, -source, key = "skew_alg", value = "skew_val")
+
+
+skew_plots <- list()
+
+skew_plots[[1]] <- ggplot(data = fs_bank_skews, aes(x = skew_1, y = skew_2)) +
+  geom_point(alpha = .7) +
+  theme_bw() +
+  ggtitle("Skew 1 v. Skew 2")
+
+skew_plots[[2]] <- ggplot(data = fs_bank_skews, aes(x = skew_1, y = skew_3)) +
+  geom_point(alpha = .7) +
+  theme_bw() +
+  ggtitle("Skew 1 v. Skew 3") 
+
+skew_plots[[3]] <- ggplot(data = fs_bank_skews, aes(x = skew_2, y = skew_3)) +
+  geom_point(alpha = .7) +
+  theme_bw() +
+  ggtitle("Skew 2 v. Skew 3")
+
+gridExtra::grid.arrange(grobs = skew_plots, nrow = 1)
+
+```
+
+```{r ranked skew, fig.width = 12}
+
+fs_bank_skews <- fs_bank_skews %>%
+  arrange(sort(skew_1)) %>%
+  mutate(skew_1_rank = row_number()) %>%
+  arrange(sort(skew_2)) %>%
+  mutate(skew_2_rank = row_number()) %>%
+  arrange(sort(skew_3)) %>%
+  mutate(skew_3_rank = row_number())
+
+fs_bank_rank_plots <- list()
+
+fs_bank_rank_plots[[1]] <- ggplot(data = fs_bank_skews, aes(x = skew_1_rank, y = skew_2_rank)) +
+  geom_point(alpha = .7) +
+  theme_bw() +
+  ggtitle("Skew 1 v. Skew 2 Rank")
+
+fs_bank_rank_plots[[2]] <- ggplot(data = fs_bank_skews, aes(x = skew_1_rank, y = skew_3_rank)) +
+  geom_point(alpha = .7) +
+  theme_bw() +
+  ggtitle("Skew 1 v. Skew 3 Rank") 
+
+fs_bank_rank_plots[[3]] <- ggplot(data = fs_bank_skews, aes(x = skew_2_rank, y = skew_3_rank)) +
+  geom_point(alpha = .7) +
+  theme_bw() +
+  ggtitle("Skew 2 v. Skew 3 Rank")
+
+
+gridExtra::grid.arrange(grobs = fs_bank_rank_plots, nrow = 1)
+```
+
+Are literally all of the ranks exactly the same?
+
+```{r literally equal, include = T}
+all((fs_bank_skews$skew_1_rank == fs_bank_skews$skew_2_rank),
+    (fs_bank_skews$skew_1_rank == fs_bank_skews$skew_3_rank),
+    (fs_bank_skews$skew_3_rank == fs_bank_skews$skew_2_rank))
+
+```
+
