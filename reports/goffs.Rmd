@@ -1,0 +1,181 @@
+---
+title: "Mapping FS space"
+output: github_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(scads)
+library(ggplot2)
+dataset <- "large"
+```
+
+```{r get an SAD}
+if(dataset == "plants") {
+  
+  portal_sad <- portalr::plant_abundance(level = "Treatment", type = "Winter Annuals", plots = "All", unknowns = F, correct_sp = T, shape = "flat", min_quads = 16) %>%
+    filter(treatment == "control") %>%
+    select(year, species, abundance) %>%
+    filter(year == 1994) %>%
+    select(-year) %>%
+    rename(abund = abundance) %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+} else if(dataset == "rodents94") {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1994))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+} else {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  }
+
+nspp = length(portal_sad)
+nind = sum(portal_sad)
+
+portal_sad <- data.frame(
+  abund = portal_sad,
+  source = "observed",
+  rank = 1:length(portal_sad),
+  sim = -99,
+  stringsAsFactors = F
+)
+
+```
+
+```{r get a BUNCH of fs samples, eval = F, include=T}
+
+fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
+save(fs_bank, file = "fs_bank_94.Rds")
+
+```
+
+```{r load fs bank}
+
+if(dataset == "plants") {
+  load(here::here("fs_bank_plants.Rds"))
+  nametoprint <- "Portal winter annuals 1994, 10000 draws"
+  fs_bank <- fs_bank[, 1:10000]
+} else if(dataset == "rodents94") {
+  load(here::here("fs_bank_94.Rds"))
+  nametoprint <- "Portal control rodents 1994, 10000 draws"
+} else if(dataset == "small") {
+  load(here::here("fs_bank_small.Rds"))
+  nametoprint <- "Portal control rodents 1990-95, 100 draws"
+} else {
+  load(here::here("fs_bank.Rds"))
+  nametoprint <- "Portal control rodents 1990=95, 10000 draws"
+}
+
+```
+
+```{r manip fs_bank}
+
+fs_bank_M <- fs_bank %>%
+  t() %>%
+  as.data.frame() %>%
+  distinct() %>%
+  t() %>%
+  as.data.frame() %>%
+  mutate(rank = row_number()) %>%
+  tidyr::gather(-rank, key = "sim", value = "abund") %>%
+  mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+         source = "sampled") %>%
+  bind_rows(portal_sad)
+
+```
+
+
+# This report is for `r nametoprint`. 
+
+## Density plots of raw rank abundances
+
+The y-axes are abundance (on the left) and relative abundance (on the right). Each black dot is an abundance value from a vector drawn from the feasible set. The red line plots the distribution from Portal.
+
+The black dots are semi-transparent, which makes it a little easier to see the density distribution.
+
+```{r plot rads and rescaled rads, fig.width = 10}
+
+fs_dp <- ggplot(data = fs_bank_M, aes(x =rank, y = abund, color = source, group = sim)) + 
+  geom_line(data = filter(fs_bank_M, source == "sampled"), alpha = .05, size = .25) +
+  geom_line(data = filter(fs_bank_M, source == "observed"),  alpha = .75, size = .85) +
+  theme_bw() +
+  ggtitle("Abundance: samples from FS vs observed") +
+  scale_color_viridis_d(begin = .3, end = .8)
+
+fs_dp
+```
+
+## MaxEnt (Fisher logseries)
+
+What is the likelihood of the empirical vector coming from the best fit log series compared to the likelihood of the FS samples coming from that logseries?
+
+
+```{r logseries}
+
+thisESF <- meteR::meteESF(S0 = nspp, N0 = nind)
+
+thisSAD <- meteR::sad(thisESF)
+
+logSeriesFit <-fs_bank_M %>%
+  group_by(sim, source) %>%
+  summarize(ll = sum(thisSAD$d(abund, log = T))) %>%
+  ungroup()
+
+
+logSeriesPercentile <- 100 * (sum( filter(logSeriesFit, source == "sampled")$ll <= filter(logSeriesFit, source == "observed")$ll[1]) / max(logSeriesFit$sim))
+
+logSeriesViolin <- ggplot(data = logSeriesFit, aes(x = 0, y = ll, color = source)) +
+  geom_violin(data = filter(logSeriesFit, source == "sampled")) +
+  geom_point(data = filter(logSeriesFit, source == "observed")) +
+  theme_bw() +
+  scale_color_viridis_d(begin = .3, end = .8) +
+  ylab(label = "Loglikelihood of sample coming from logseries") +
+  ggtitle("Logseries loglikelihood", subtitle = paste0("Empirical percentile: ", signif(logSeriesPercentile, 5)))
+
+logSeriesViolin
+
+fs_bank_LS <- data.frame(
+  abund = sort(meteR::meteDist2Rank(thisSAD)),
+  rank = 1:nspp,
+  sim = -100,
+  source = "METE logseries",
+  stringsAsFactors = F
+) %>%
+  bind_rows(fs_bank_M)
+
+densityLogSeries <- ggplot(data = fs_bank_LS, aes(x =rank, y = abund, color = source, group = sim)) +
+  geom_line(data = filter(fs_bank_LS, source == "sampled"), alpha = .05, size = .25) +
+  geom_line(data = filter(fs_bank_LS, source != "sampled"),  alpha = .75, size = .85) +
+  theme_bw() +
+  ggtitle("Abundance: samples from FS vs observed and METE") +
+  scale_color_viridis_d(end = .8)
+
+densityLogSeries
+
+```
+
+So for this example, the empirical has a higher likelihood of coming from the METE prediction (Fisher logseries, which can be parameterized using S and N) than ```r logSeriesPercentile```% of the feasible set. I _think_ this means the predicted distribution is predicting information over and above the general shape forced by the feasible set. But I would like as many nth opinions as I can get. 
+
