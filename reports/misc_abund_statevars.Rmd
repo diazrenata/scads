@@ -1,0 +1,97 @@
+---
+title: "Exploring statevar space"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Miscellaneous Abundance
+
+Elita Baldridge's community abundance dataset. 
+
+```{r load}
+library(dplyr)
+library(ggplot2)
+
+ma <- MATSS::import_retriever_data("community-abundance-misc")
+
+names(ma)
+head(ma$community_abundance_misc_main)
+
+ma_totals <- ma$community_abundance_misc_main %>%
+  group_by(site_id) %>%
+  summarize(nspp = n(),
+            nind = sum(abundance)) %>%
+  ungroup()
+
+
+ma_plot <- ggplot(data = ma_totals, aes(x = nspp, y = nind)) +
+  geom_point(alpha = .5) +
+  theme_bw() +
+  ggtitle("S and N for Misc Abund Dataset")
+
+ma_plot
+```
+
+```{r ma small}
+
+ma_small <- ma_totals %>%
+  filter(nspp <= 100,
+         nind <= 40000)
+
+ma_small_plot <- ggplot(data = ma_small, aes(x = nspp, y = nind)) +
+  geom_point(alpha = .5) +
+  theme_bw() +
+  ggtitle("S and N for Misc Abund Dataset - only small communities")
+
+ma_small_plot
+
+```
+
+# MCDB
+
+Mammal community database
+
+```{r mcdb}
+
+mcdb <- MATSS::import_retriever_data("mammal-community-db")
+
+mcdb_totals <- mcdb$mammal_community_db_communities %>%
+  filter(presence_only == 0) %>%
+  group_by(site_id) %>%
+  summarize(nspp = n(),
+            nind = sum(abundance)) %>%
+  ungroup()
+
+mcdb_plot <- ggplot(data = mcdb_totals, aes(x = nspp, y = nind)) +
+  geom_point(alpha = .5) +
+  theme_bw() +
+  ggtitle("S and N for MCDB")
+
+mcdb_plot
+
+```
+
+# Gentry forest transects
+
+```{r gentry}
+
+gentry <- MATSS::import_retriever_data("gentry-forest-transects")
+
+gentry_totals <- gentry$gentry_forest_transects_counts %>%
+  group_by(site_code, line) %>%
+  summarize(nspp = n(),
+            nind = sum(count)) %>%
+  ungroup()
+
+
+gentry_plot <- ggplot(data = gentry_totals, aes(x = nspp, y = nind)) +
+  geom_point(alpha = .5) +
+  theme_bw() +
+  ggtitle("S and N for Gentry")
+
+gentry_plot
+
+```
