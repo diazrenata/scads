@@ -101,7 +101,7 @@ server <- function(input, output) {
       geom_point() +
       geom_text(aes(x = coeff_name, y = .25, label = signif(coeff, 2))) +
       theme_bw() +
-      ylim(0, .3) +
+      ylim(-.5, .3) +
       facet_wrap(source ~ .) +
       theme(legend.position = "none")
     

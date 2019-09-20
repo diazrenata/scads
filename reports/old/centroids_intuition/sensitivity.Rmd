@@ -1,0 +1,327 @@
+---
+title: "Sensitivity"
+author: "Renata Diaz"
+date: "8/22/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2)
+library(meteR)
+library(dplyr)
+library(scads)
+
+nsamples <- 300
+
+save_samples <- F
+
+load_samples <- T
+
+```
+
+```{r get some data, echo = F}
+
+portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+
+portal_sad <- portal_data %>%
+  select(species) %>%
+  group_by(species) %>%
+  summarize(abund = n()) %>%
+  ungroup() %>%
+  select(abund) %>%
+  arrange(abund) %>%
+  as.matrix() %>%
+  as.vector()
+
+nspp = length(portal_sad)
+nind = sum(portal_sad)
+
+portal_sad <- data.frame(
+  abund = portal_sad,
+  source = "emp"
+)
+
+
+```
+
+```{r make and plot extreme cases, echo = F}
+
+flat <- portal_sad %>%
+  mutate(source = "flat",
+         abund = generate_even_sad(abund))
+
+stepwise <- portal_sad %>%
+  mutate(source = "stepwise",
+         abund = generate_stepwise_sad(abund))
+
+expesque <- portal_sad %>%
+  mutate(source = "exp", 
+         abund = generate_exponential_sad(abund))
+
+prec <- portal_sad %>%
+  mutate(source = "precipice",
+         abund = generate_precipice_sad(abund))
+
+all_sads <- bind_rows(portal_sad, flat, stepwise, expesque, prec) %>%
+  group_by(source) %>%
+  mutate(rank = row_number()) %>%
+  ungroup()
+
+all_sads_plot <- ggplot(data = all_sads, aes(x = rank, y = abund, color = source)) +
+  geom_point() +
+  facet_wrap(source ~ .) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+
+
+```
+
+```{r generate and plot Leg coeffs, fig.dim= c(15, 6)}
+
+legendre_estimates_list <- lapply(as.list(unique(all_sads$source)),
+                             FUN = function(source_name) 
+                               return(legendre_approx(filter(all_sads, source == source_name)$abund, nleg = 5)$coefficients)) 
+
+names(legendre_estimates_list) <- unique(all_sads$source)
+
+legendre_estimates <- bind_rows(legendre_estimates_list) %>%
+  mutate(varname = names(legendre_estimates_list$emp),
+         varindex = 1:length(legendre_estimates_list$emp)) %>%
+  tidyr::gather(-varname, -varindex, key = "source", value = "coefficient")
+
+
+coeffs_plot <- ggplot(data = legendre_estimates, aes(x = varindex, y = coefficient, color = source)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = unique(legendre_estimates$varindex), labels = unique(legendre_estimates$varname)) +
+    facet_wrap(source ~ .) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 75, hjust = 1),
+        legend.position = "none")
+
+gridExtra::grid.arrange(grobs = list(all_sads_plot, coeffs_plot), nrow = 1)
+
+```
+
+
+```{r draw and plot fs and mete corpuses}
+if(load_samples) {
+  load(here::here("reports", "centroids_intuition", "sensitivity_stash.Rds"))
+} else {
+set.seed(1977)
+
+mete_samples <- sample_METE(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+  tidyr::gather(key = "sim", value = "abund") %>%
+  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+                source = "mete")
+
+fs_samples <- sample_feasibleset(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+  tidyr::gather(key = "sim", value = "abund") %>%
+  dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+                source = "fs")
+
+sim_sads <- bind_rows(mete_samples, fs_samples) %>%
+  group_by(sim, source) %>%
+  mutate(rank = row_number()) %>%
+  ungroup()
+
+if(save_samples) {
+  save(sim_sads, file = here::here("reports", "centroids_intuition", "sensitivity_stash.Rds"))
+}
+}
+
+sample_plot <- ggplot(data = sim_sads, aes(x = rank, y = abund)) +
+  geom_point(alpha = 0.05) +
+  theme_bw() +
+  facet_grid(cols = vars(source))
+
+sample_plot
+
+```
+
+```{r fit and plot sims}
+
+
+sim_estimates_list <- apply(as.matrix(distinct(select(sim_sads, source, sim))),
+                            MARGIN = 1,
+                             FUN = function(sim_source) 
+                               return(legendre_approx(filter(sim_sads, source == sim_source[1], sim == as.integer(sim_source[2]))$abund, nleg = 5)$coefficients))
+
+sim_estimates <- t(sim_estimates_list) %>%
+  as.data.frame() %>%
+  mutate(sim_source = apply(as.matrix(distinct(select(sim_sads, source, sim))),
+                            MARGIN = 1, FUN = function(sim_source) 
+                               return(sim_source[1])),
+         sim = apply(as.matrix(distinct(select(sim_sads, source, sim))),
+                            MARGIN = 1, FUN = function(sim_source) 
+                               return(as.integer(sim_source[2]))))
+sim_estimates <- sim_estimates %>%
+  tidyr::gather(-sim, -sim_source, key = "varname", value = "coefficient") %>%
+  group_by(sim, sim_source) %>%
+  mutate(varindex = row_number()) %>%
+  ungroup()
+
+
+leg_estimates_overlay <- bind_rows(
+  mutate(legendre_estimates, sim_source = "mete"),
+  mutate(legendre_estimates, sim_source = "fs")
+)
+
+
+sim_coeff_plot <- ggplot(data = sim_estimates, aes(x = varindex, y = coefficient)) + 
+  geom_point(alpha = .05) +
+  scale_x_continuous(breaks = unique(sim_estimates$varindex), labels = unique(sim_estimates$varname)) + 
+  theme_bw() +
+  facet_grid(cols = vars(sim_source)) +
+  theme(axis.text.x = element_text(angle = 75, hjust = 1)) +
+  geom_line(data = leg_estimates_overlay, aes(x = varindex, y = coefficient, color = source), size = 1)
+
+
+sim_coeff_plot
+```
+
+```{r coeff distances}
+
+eucl_rows <- function(v1, v2) {
+  m <- matrix(data = c(v1, v2), nrow = 2, byrow = T)
+  return(dist(m, method = "euclidean")[1])
+}
+
+coeff_distances <- sim_estimates %>%
+  group_by(sim_source, sim) %>%
+  summarize(emp = eucl_rows(coefficient, filter(legendre_estimates, source == "emp")$coefficient),
+         flat = eucl_rows(coefficient, filter(legendre_estimates, source == "flat")$coefficient), 
+         stepwise = eucl_rows(coefficient, filter(legendre_estimates, source == "stepwise")$coefficient),
+         exp = eucl_rows(coefficient, filter(legendre_estimates, source == "exp")$coefficient), 
+         precipice = eucl_rows(coefficient, filter(legendre_estimates, source == "precipice")$coefficient)) %>%
+  ungroup() %>%
+  tidyr::gather(-sim_source, -sim, key = "dist_source", value = "eucl_distance")
+# 
+# fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = nsamples, distinct = TRUE) %>%
+#   tidyr::gather(key = "sim", value = "abund") %>%
+#   dplyr::mutate(sim = as.integer(substr(sim, 2, nchar(sim))),
+#                 source = "fs") 
+# 
+# fs_bank_list <- apply(as.matrix(distinct(select(fs_bank, source, sim))),
+#                             MARGIN = 1,
+#                              FUN = function(sim_source) 
+#                                return(legendre_approx(filter(fs_bank, source == sim_source[1], sim == as.integer(sim_source[2]))$abund, nleg = 5)$coefficients))
+# 
+# fs_bank_estimates <- t(fs_bank_list) %>%
+#   as.data.frame() %>%
+#   mutate(sim = apply(as.matrix(distinct(select(fs_bank, source, sim))),
+#                             MARGIN = 1, FUN = function(sim_source) 
+#                                return(as.integer(sim_source[2]))))
+# 
+# fs_bank_estimates <- fs_bank_estimates %>%
+#   tidyr::gather(-sim, key = "varname", value = "coefficient") %>%
+#   group_by(sim) %>%
+#   mutate(varindex = row_number()) %>%
+#   ungroup() %>%
+#   rename(fs_sim = sim)
+
+sim_estimates_bank <- sim_estimates %>%
+  mutate(sim = ((sim + 1) %% nsamples) + 1) %>%
+  rename(new_sim = sim)
+
+
+sim_coeff_distances <- sim_estimates %>%
+  group_by(sim_source, sim) %>%
+  summarize(fs = eucl_rows(coefficient, filter(sim_estimates_bank, sim_source == "fs", new_sim == sim)$coefficient),
+            mete = eucl_rows(coefficient, filter(sim_estimates_bank, sim_source == "mete", new_sim == sim)$coefficient)) %>%
+  ungroup() %>%
+  tidyr::gather(-sim_source, -sim, key = "dist_source", value = "eucl_distance")
+  
+coeff_distances <- bind_rows(coeff_distances, sim_coeff_distances)
+
+distance_plot <- ggplot(data = coeff_distances, aes(x = dist_source, y = eucl_distance, color = dist_source)) +
+  geom_boxplot() +
+  theme_bw() +
+  facet_grid(cols = vars(sim_source)) +
+  theme(legend.position = "none")
+
+distance_plot
+```
+
+## Centroids
+
+This seems to match intuition from the coefficients plot. I'm not completely sure but I think the euclidean distance *to all other points* (above) is weird for a couple reasons; one being it's not actually being calculated to all other points; I just cycled forward two ticks. So every point gets compared to 2 other points, I guess? i + 2 and i - 2. 
+
+```{r centroids}
+
+head(sim_estimates)
+
+sim_centroids <- sim_estimates %>%
+  group_by(sim_source, varname, varindex) %>%
+  summarize(centroid_coefficient = mean(coefficient)) %>%
+  ungroup()
+
+
+centroid_plot1 <- ggplot(data = sim_estimates, aes(x = varindex, y = coefficient)) +
+  geom_point(alpha = 0.05) +
+  geom_point(data = sim_centroids, aes(x = varindex, y = centroid_coefficient), color = "red") +
+  facet_grid(cols = vars(sim_source)) +
+  theme_bw()
+
+centroid_plot1
+
+centroid_distances <- sim_estimates %>%
+  left_join(sim_centroids, by = c('sim_source', 'varname', 'varindex')) %>%
+  group_by(sim_source, sim) %>%
+  summarize(dist_to_centroid = eucl_rows(coefficient, centroid_coefficient)) %>%
+  ungroup()
+
+centroid_distances_overlay <- legendre_estimates %>%
+  full_join(sim_centroids, by = c("varname", "varindex")) %>%
+  group_by(source, sim_source) %>%
+  summarize(dist_to_centroid = eucl_rows(coefficient, centroid_coefficient)) %>%
+  ungroup()
+
+
+
+centroid_dist_plot <- ggplot(data = centroid_distances, aes(x = sim_source, y = dist_to_centroid)) +
+  geom_boxplot(color = "grey", alpha = .5) +
+  geom_point(data = centroid_distances_overlay, aes(x = sim_source, y = dist_to_centroid, color = source), size = 3) +
+  theme_bw() 
+
+centroid_dist_plot
+
+```
+
+## Centroids on log abundance?
+
+(want to somehow downweight really big abundance values? but euclidean distance in log space seems highly suspect, and I don't really have intuition for interpreting the results)
+
+```{r abundance centroids}
+log_sim_sads <- sim_sads %>%
+  mutate(abund = log(abund)) %>%
+  rename(sim_source = source)
+
+log_sim_centroids <- log_sim_sads %>%
+  group_by(sim_source, rank) %>%
+  summarize(centroid_abund = mean(abund)) %>%
+  ungroup() 
+
+log_sads <- all_sads %>%
+  mutate(abund = log(abund)) %>%
+  full_join(log_sim_centroids, by = c("rank")) %>%
+  group_by(sim_source, source) %>%
+  summarize(dist_to_centroid = eucl_rows(abund, centroid_abund)) %>%
+  ungroup()
+
+log_sim_distances <- log_sim_sads %>%
+  left_join(log_sim_centroids, by = "sim_source", "rank") %>%
+  group_by(sim_source, sim) %>%
+  summarize(dist_to_centroid = eucl_rows(abund, centroid_abund)) %>%
+  ungroup()
+
+log_centroid_plot <- ggplot(data = log_sim_distances, aes(x = sim_source, y = dist_to_centroid)) +
+  geom_boxplot(color = "grey", alpha = .5) +
+  geom_point(data = log_sads, aes(x = sim_source, y = dist_to_centroid, color = source), size = 3) +
+  theme_bw()
+
+log_centroid_plot
+
+```

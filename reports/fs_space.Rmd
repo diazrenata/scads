@@ -1,0 +1,654 @@
+---
+title: "Mapping FS space"
+output: github_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(scads)
+library(ggplot2)
+dataset <- "plants"
+```
+
+```{r get an SAD}
+if(dataset == "plants") {
+  
+  portal_sad <- portalr::plant_abundance(level = "Treatment", type = "Winter Annuals", plots = "All", unknowns = F, correct_sp = T, shape = "flat", min_quads = 16) %>%
+    filter(treatment == "control") %>%
+    select(year, species, abundance) %>%
+    filter(year == 1994) %>%
+    select(-year) %>%
+    rename(abund = abundance) %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+  nleg <- 10
+  
+} else if(dataset == "rodents94") {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1994))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+  nleg <- 5
+  
+} else {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+  nleg <- 8
+}
+
+nspp = length(portal_sad)
+nind = sum(portal_sad)
+
+portal_sad <- data.frame(
+  abund = portal_sad,
+  source = "emp",
+  rank = 1:length(portal_sad)
+)
+
+```
+
+```{r get a BUNCH of fs samples, eval = F, include=T}
+
+fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
+save(fs_bank, file = "fs_bank_94.Rds")
+
+```
+
+```{r load fs bank}
+
+if(dataset == "plants") {
+  load(here::here("fs_bank_plants.Rds"))
+  nametoprint <- "Portal winter annuals 1994, 10000 draws"
+} else if(dataset == "rodents94") {
+  load(here::here("fs_bank_94.Rds"))
+  nametoprint <- "Portal control rodents 1994, 10000 draws"
+} else if(dataset == "small") {
+  load(here::here("fs_bank_small.Rds"))
+  nametoprint <- "Portal control rodents 1990-95, 100 draws"
+} else {
+  load(here::here("fs_bank.Rds"))
+  nametoprint <- "Portal control rodents 1990=95, 10000 draws"
+}
+
+```
+
+```{r manip fs_bank}
+fs_bank_M <- fs_bank %>%
+  as.data.frame() %>%
+  mutate(rank = row_number()) %>%
+  tidyr::gather(-rank, key = "sim", value = "abund") %>%
+  mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
+
+```
+
+
+# This report is for `r nametoprint`. 
+
+## Density plots of raw rank abundances
+
+The y-axes are abundance (on the left) and relative abundance (on the right). Each black dot is an abundance value from a vector drawn from the feasible set. The red line plots the distribution from Portal.
+
+The black dots are semi-transparent, which makes it a little easier to see the density distribution.
+
+The rescaled vectors (on the right) are what go into Legendre approximation. In this case, these plots should look identical, because all the draws from the feasible set have the same number of individuals as the Portal vector. I have at other times compared SADs without the total abundance constraint, where the rescaled plots could look quite different.
+
+```{r plot rads and rescaled rads, fig.width = 10}
+fs_dp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = abund)) + 
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_sad, aes(x = rank, y = abund), alpha = .5, color = "red") +
+  theme_bw() +
+  ggtitle("Abundance: draws from FS vs Portal")
+
+fs_bank_M <- fs_bank_M %>%
+  mutate(sabund = abund / nind)
+
+portal_sad <- portal_sad %>%
+  mutate(sabund = abund/nind)
+
+fs_sdp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = sabund)) + 
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_sad, aes(x = rank, y = sabund), alpha = .5, color = "red") +
+  theme_bw() +
+  ggtitle("Abundance: draws from FS vs Portal, rescaled")
+
+gridExtra::grid.arrange(grobs = list(fs_dp, fs_sdp), nrow = 1) 
+```
+
+
+```{r calculations for leg approximation}
+
+fs_leg_coeffs <- apply(as.matrix(1:ncol(fs_bank)), MARGIN = 1, 
+                       FUN = function(sim_index, fs_bank_M) 
+                         return(legendre_approx(filter(fs_bank_M, sim == sim_index)$sabund, nleg = nleg)$coefficients), fs_bank_M = fs_bank_M)
+
+
+portal_leg_coeffs <-data.frame(coeff_value = legendre_approx(portal_sad$sabund, nleg = nleg)$coefficients) %>%
+  mutate(coeff_name = names(legendre_approx(portal_sad$sabund, nleg = nleg)$coefficients),
+         coeff_index = row_number())
+
+fs_leg_coeffs_M <- fs_leg_coeffs %>%
+  as.data.frame() %>%
+  mutate(coeff_name = row.names(fs_leg_coeffs)) %>%
+  tidyr::gather(-coeff_name, key = "sim", value = "coeff_value") %>%
+  mutate(sim = as.integer(substr(sim, 2, nchar(sim)))) %>%
+  left_join(select(portal_leg_coeffs, coeff_index, coeff_name), by = "coeff_name")
+
+
+coeffs_plot <- ggplot(data = fs_leg_coeffs_M, aes(x = coeff_index, y = coeff_value)) +
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_leg_coeffs, aes(x = coeff_index, y = coeff_value), alpha = .5, color = "red") +
+  theme_bw()
+
+```
+
+
+## Density plots of coeffiients from Legendre approximation
+
+The y-axis is the value of the coefficient for each Legendre polynomial. Each black dot is a value for a draw from the feasible set. 
+
+The green line marks the centroid of the coefficients for the draws from the feasible set. The red line marks the coefficients for the Portal vector. 
+
+```{r distance to centroid}
+
+fs_centroid <- fs_leg_coeffs_M %>%
+  group_by(coeff_name) %>%
+  summarize(centroid_value = mean(coeff_value)) %>%
+  ungroup()
+
+fs_leg_coeffs_M <- fs_leg_coeffs_M %>%
+  left_join(fs_centroid, by = "coeff_name")
+
+portal_leg_coeffs <- portal_leg_coeffs %>%
+  left_join(fs_centroid, by = "coeff_name")
+
+coeffs_c_plot <- coeffs_plot + 
+  geom_line(data = portal_leg_coeffs, aes(x = coeff_index, y = centroid_value), color = "green") 
+coeffs_c_plot
+```
+
+
+## True values compared to estimations via Legendre coefficients
+
+
+Here we are reconstructing the scaled SAD from the approximated coefficients. The y-axis is the scaled abundance or estimated scaled abundance. The hollow points are estimates from approximation with `r nleg` polynomials, and the stars are the true values. 
+
+There is no true value for the centroid, but `closest_fs` is the element of the feasible set with the lowest euclidean distance between its coefficients and the centroid coefficients. `farthest_fs` is the element of the feasible set with the largest distance between its coefficients and the centroid coefficients.  
+
+
+```{r generate from centroid, empirical}
+fs_dist <- fs_leg_coeffs_M %>%
+  group_by(sim) %>%
+  summarize(centroid_dist = eucl_rows(coeff_value, centroid_value)) %>%
+  ungroup() %>%
+  arrange(centroid_dist) %>%
+  mutate(sim_rank = row_number())
+
+estimates_df <- data.frame(
+  rank = c(1:nspp),
+  centroid = legendre_generate(coeff_values = portal_leg_coeffs$centroid_value, nleg = nleg, nspp = nspp),
+  closest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == 1)$sim)$coeff_value, nleg = nleg, nspp = nspp),
+  farthest_fs = legendre_generate(coeff_values = filter(fs_leg_coeffs_M, sim == filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)$coeff_value, nleg = nleg, nspp = nspp),
+  portal = legendre_generate(coeff_values = portal_leg_coeffs$coeff_value, nleg = nleg, nspp = nspp)) %>%
+  tidyr::gather(-rank, key = "source", value = "est_abund")
+
+true_sads <- filter(fs_bank_M, sim %in% c(filter(fs_dist, sim_rank == 1)$sim, 
+                                          filter(fs_dist, sim_rank == max(fs_dist$sim_rank))$sim)) %>%
+  left_join(select(fs_dist, sim_rank, sim), by = "sim") %>%
+  mutate(source = ifelse((sim_rank == 1), "closest_fs", "farthest_fs")) %>%
+  select(-sim, -sim_rank) %>%
+  bind_rows(mutate(portal_sad, source = "portal")) %>%
+  left_join(estimates_df, by = c("rank", "source")) %>%
+  bind_rows(data.frame(source = "centroid", stringsAsFactors = F))
+
+
+ssqes <- data.frame(
+  source = c("centroid", "closest_fs", "farthest_fs", "portal"),
+  ssqe = c(NA,
+           ssqe(filter(true_sads, source == "closest_fs")$est_abund, filter(true_sads, source == "closest_fs")$sabund), 
+           ssqe(filter(true_sads, source == "farthest_fs")$est_abund, filter(true_sads, source == "farthest_fs")$sabund),
+           ssqe(filter(true_sads, source == "portal")$est_abund, filter(true_sads, source == "portal")$sabund))
+)
+
+estimates_plot <- ggplot(data = estimates_df, aes(x = rank, y = est_abund, color = source)) +
+  geom_point(shape = 1) +
+  geom_point(data = true_sads, aes(x = rank, y = sabund, color = source), shape = 8) +
+  geom_label(data = ssqes, aes(x = 4, y = c(.95, .87, .8, .73), label = paste0("ssqe: ", format(signif(ssqe, 2), scientific = FALSE)), color = source), show.legend = FALSE) +
+  scale_colour_viridis_d(end = .8, option = "C") +
+  theme_bw() +
+  ylim(0, 1)
+
+estimates_plot
+```
+
+
+## Distribution of coefficient distances from the centroid
+
+Violin/density plot of the Euclidean distance between the centroid coefficients and the coefficients for draws from the feasible set. The violin is for all draws from the feasible set. The black dots are individual draws. The colored dots are for the closest and farthest (from the centroid) elements of the feasible set, and for Portal. 
+
+```{r dist to centroid plot}
+all_dist <- fs_dist %>%
+  mutate(source1 = "fs") %>%
+  mutate(source = NA) %>%
+  mutate(source = ifelse(centroid_dist == max(fs_dist$centroid_dist), "farthest_fs", source)) %>%
+  mutate(source = ifelse(centroid_dist == min(fs_dist$centroid_dist), "closest_fs", 
+                         source)) %>%
+  bind_rows(data.frame(
+    source = "portal",
+    source1 = "portal",
+    sim = NA,
+    sim_rank = NA,
+    centroid_dist = eucl_rows(portal_leg_coeffs$coeff_value, 
+                              portal_leg_coeffs$centroid_value),
+    stringsAsFactors = F
+  ))
+
+centroid_dist_plot <- ggplot(data = filter(all_dist, source1 != "portal"), aes(x = 0, y = centroid_dist)) +
+  geom_violin() +
+  geom_point(alpha = .1, size = .5) +
+  geom_point(data = filter(all_dist, !is.na(source)), aes(x = 0, y = centroid_dist, color = source), size = 2) +
+  theme_bw()+
+  scale_colour_viridis_d(begin = .2, end = .8, option = "C")
+
+centroid_dist_plot
+
+```
+
+
+```{r sabund heatmap, fig.height=8, fig.width = 18, include = F}
+
+fs_bank_M <- left_join(fs_bank_M, select(fs_dist, sim, centroid_dist), by = "sim")
+
+dist_quantiles <- quantile(fs_bank_M$centroid_dist, probs = c(0, .75, .85, .95, .975, .99, 1))
+
+fs_bank_M <- fs_bank_M %>%
+  mutate(qbin = vapply(as.matrix(fs_bank_M$centroid_dist), 
+                       FUN = function(c_d, d_q) 
+                         return((as.integer(substr(names(d_q)[max(which(d_q <= c_d))],
+                                                   1,
+                                                   nchar(names(d_q)[max(which(d_q <= c_d))]) - 1))) / 100),
+                       d_q = dist_quantiles,
+                       FUN.VALUE = .1))
+
+# fs_heatmap <- ggplot(data = fs_bank_M, aes(x = as.factor(qbin), y = sabund, color = qbin)) +
+#   geom_point(size = .5, alpha = .1) +
+#   geom_point(data = filter(fs_bank_M, qbin > .95), size = 1, alpha = 1) + 
+#   scale_colour_viridis_c(option = "plasma", end = .8) +
+#   theme_minimal() +
+#   theme(panel.background = element_rect(fill = "white"),
+#         legend.position = "top",
+#         panel.border = element_rect(fill = NA, colour = "black"),
+#         panel.spacing.x = unit(0,"line")) +
+#   facet_grid(cols = vars(rank), switch = "x")
+# fs_heatmap
+
+```
+
+```{r sabund linecloud, include = F}
+
+fs_bank_linecloud <- fs_bank_M %>%
+  select(sim, centroid_dist) %>%
+  distinct() %>% 
+  arrange(desc(centroid_dist)) %>%
+  mutate(dist_rank = row_number()) %>%
+  right_join(fs_bank_M, by =c("sim", "centroid_dist")) %>%
+  mutate(qbin_alpha = ifelse(qbin <= .75, .75, qbin))
+
+linecloud <- ggplot(data = fs_bank_linecloud, aes(x = rank, y = sabund, color = as.factor(qbin), alpha = qbin_alpha, group = sim)) +
+  geom_line(size = .1, show.legend = FALSE) +
+  geom_line(data = filter(fs_bank_linecloud, dist_rank <= 3), aes(x = rank, y = sabund, color = as.factor(qbin)), alpha = 1, size = .6) +
+  scale_colour_viridis_d(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top")
+
+linecloud
+
+```
+
+```{r coefficients linecloud, include = F}
+
+fs_coeffs_cloud <- left_join(fs_leg_coeffs_M, 
+                             distinct(select(fs_bank_linecloud, 
+                                             sim, qbin, qbin_alpha, dist_rank)), by = "sim")
+
+fs_coeffs_linecloud <-  ggplot(data = fs_coeffs_cloud, aes(x = coeff_index, y = coeff_value, color = as.factor(qbin), alpha = qbin_alpha, group = sim)) +
+  geom_line(size = .1, show.legend = FALSE) +
+  geom_line(data = filter(fs_coeffs_cloud, dist_rank <= 3), aes(x = coeff_index, y = coeff_value, color = as.factor(qbin)), alpha = 1, size = .6) +
+  scale_colour_viridis_d(option = "plasma", end = .8) + 
+  theme_bw() +
+  scale_x_continuous(breaks = unique(fs_coeffs_cloud$coeff_index), labels = unique(fs_coeffs_cloud$coeff_name)) +
+  theme(legend.position = "top")
+
+fs_coeffs_linecloud
+
+```
+
+## Heat map of RADs, shaded by distance to the centroid
+
+The y axis is scaled abundance. Each line marks one draw from the feasible set. The colors (`qbin`) map the percentile of the _Euclidean distance between the draw's coefficients and the centroid of the coefficients_. Purpley-pink colors are closer to the centroid; orange to yellow are far. The 3 farthest draws are marked with thicker and less transparent lines. The red dots are the values from Portal. 
+
+```{r sabund plus empirical linecloud}
+
+emp_linecloud <- linecloud +
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
+
+emp_linecloud
+```
+
+
+## Heat map of coefficients, shaded by distance to the centroid
+
+The y-axis is coefficient values, and the x axis is each coefficient. As above, each line marks the coefficients for a single draw, and lines are shaded according to the distance to the centroid. The red dots are the coefficients for Portal.
+
+```{r coefficients plus empirical linecloud}
+emp_coeff_linecloud <- fs_coeffs_linecloud +
+  geom_point(data = mutate(portal_leg_coeffs, sim = 1, qbin = 0, qbin_alpha = 1),
+             aes(x =coeff_index, y= coeff_value),  color = "#FF0000", show.legend = F)
+
+emp_coeff_linecloud
+
+```
+
+## Comparing coefficients centroid to abundance centroid
+
+It seems possible that the Legendre coefficients might just reproduce the same information that is in the abundance values. So I calculated a few things based on the centroid _of the scaled abundance values_ rather than the centroid of the coefficients. 
+
+### Prediction from centroid coefficient vs. centroid of abundance values
+
+The yellow line is the centroid _of the scaled abundance values_ (not the coefficients). The estimate from the centroid of the coefficients (black line and points) almost exactly matches. 
+
+```{r raw abundance centroid}
+
+raw_abund_centroid <- fs_bank_M %>%
+  select(rank, sim, sabund) %>%
+  group_by(rank) %>%
+  summarize(abund = mean(sabund)) %>%
+  ungroup() %>%
+  mutate(source = "raw_abund_centroid") %>%
+  bind_rows(rename(estimates_df, abund = est_abund))
+
+
+raw_centroid <- ggplot(data = raw_abund_centroid, aes(x = rank, y = abund, color = source)) +
+  geom_point() +
+  geom_line() +
+  theme_bw() +
+  scale_color_viridis_d(option = "viridis")
+
+raw_centroid
+```
+
+### Distances calculated from coefficient centroid vs abundance centroid
+
+Each dot is draw from the feasible set. The x axis is the distance from the centroid of the abundance values. The y axis is the distance from the centroid of the coefficients. The yellow line is 1:1. The centroid values are generally smaller than the abundance values. 
+
+```{r obs pred distance, fig.height = 4, fig.width = 4}
+
+fs_raw_dist <- fs_bank_M %>%
+  select(rank, sim, sabund) %>%
+  group_by(sim) %>%
+  summarize(rawdist = eucl_rows(sabund, filter(raw_abund_centroid, source == "raw_abund_centroid")$abund)) %>%
+  ungroup() %>%
+  arrange(rawdist) %>%
+  mutate(raw_sim_rank = row_number()) %>%
+  left_join(fs_dist, by = "sim")
+
+
+raw_coeff_plot <- ggplot(data = fs_raw_dist, aes(x = rawdist, y = centroid_dist)) +
+  geom_point() +
+  geom_line(data = data.frame(x = seq(min(c(fs_raw_dist$rawdist, fs_raw_dist$centroid_dist)), max(c(fs_raw_dist$rawdist, fs_raw_dist$centroid_dist)), length.out = 10)), aes(x = x, y = x), color = "orange") +
+  theme_bw()
+
+raw_coeff_plot
+```
+
+
+### Rank distance calculated from coefficient centroid vs abundance centroid
+
+Each dot is draw from the feasible set. The x axis is the rank of a draw's distance from the centroid of the abundance values. The y axis is the rank of that draw's distance from the centroid of the coefficients. The yellow line is 1:1. There's a relationship, but a *lot* of scatter. 
+
+
+```{r obs pred rank, fig.height=4, fig.width = 4}
+raw_coeff_rank_plot <- ggplot(data = fs_raw_dist, aes(x = raw_sim_rank, y = sim_rank)) +
+  geom_point() +
+  geom_line(data = data.frame(x = seq(min(c(fs_raw_dist$raw_sim_rank, fs_raw_dist$sim_rank)), max(c(fs_raw_dist$raw_sim_rank, fs_raw_dist$sim_rank)), length.out = 10)), aes(x = x, y = x), color = "orange") +
+  theme_bw()
+
+raw_coeff_rank_plot
+
+
+```
+
+
+## Comparing coefficient distance to other metrics
+
+Do the coefficients, or the coefficient-centroid distances, recapitulate more longstanding metrics? I tried evar and skewness. 
+
+### Evar
+
+Higher values indicate more even vectors; note the color scale is reversed. (Based on exploration, I expect lower evenness values to be at the edges). The red dots are the Portal vector. `evar` for the Portal vector is `r conditionalsads::evar(portal_sad$sabund)`. 
+
+```{r evar}
+
+fs_bank_mets <- fs_bank_M %>%
+  group_by(sim) %>%
+  mutate(evar = conditionalsads::evar(sabund),
+         skew =  conditionalsads::rad_skew(sabund)) %>%
+  ungroup() %>%
+  mutate(skew_rounded = round(skew, digits = 4))
+
+skr <- fs_bank_mets %>%
+  select(sim, skew) %>%
+  distinct() %>%
+  arrange(skew) %>%
+  mutate(skew_rank = row_number())
+
+fs_bank_mets <- left_join(fs_bank_mets, skr, by = c("sim", "skew"))
+
+
+evar_plot <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = evar, group = sim)) +
+  geom_line(size = .1, alpha = .2) +
+  geom_line(data = filter(fs_bank_mets, evar <= quantile(fs_bank_mets$evar, probs = .003)[1]), alpha = .5, size = .5) +
+  scale_colour_viridis_c(option = "plasma", end = .8, direction = -1) + 
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F) + 
+  theme_bw() +
+  theme(legend.position = "top")
+
+evar_plot
+```
+
+### Skewness
+
+#### Skewness - abundance 
+
+The y axis is abundance; colors correspond to skewness. The most and least skewed vectors are highlighted with thicker, less transparent lines. The red dots mark the Portal vector. 
+```{r sabund skew}
+skew_plot <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = skew, group = sim)) +
+  geom_line(size = .1, alpha = .2) +
+  geom_line(data = filter(fs_bank_mets, skew <= quantile(fs_bank_mets$skew, probs = .001)[1]), alpha = .5, size = .3) + 
+  geom_line(data = filter(fs_bank_mets, skew >= quantile(fs_bank_mets$skew, probs = 0.999)[1]), alpha = .5, size = .3) +
+  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top") +
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
+
+skew_plot
+
+skew_plot2 <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = skew_rounded, group = sim)) +
+  geom_line(size = .1, alpha = .2) +
+  geom_line(data = filter(fs_bank_mets, skew <= quantile(fs_bank_mets$skew, probs = .001)[1]), alpha = .5, size = .3) + 
+  geom_line(data = filter(fs_bank_mets, skew >= quantile(fs_bank_mets$skew, probs = 0.999)[1]), alpha = .5, size = .3) +
+  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top") +
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
+
+skew_plot2
+
+skew_plot3 <- ggplot(data = fs_bank_mets, aes(x = rank, y = sabund, color = skew_rank, group = sim)) +
+  geom_line(size = .1, alpha = .2) +
+  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top") +
+  geom_point(data = mutate(portal_sad, sim = 1, qbin = 0, qbin_alpha = 1), aes(x = rank, y = sabund), color = "#FF0000", show.legend = F)
+
+skew_plot3
+
+
+dominants <- fs_bank_mets %>%
+  filter(rank == nspp)
+
+dominants_skew_plot <- ggplot(data = dominants, aes(x = sabund, y = skew)) +
+  geom_point(alpha = .3) + 
+  theme_bw()
+
+dominants_skew_plot
+
+```
+
+#### Coefficients-skew plot
+
+The y axis is the coefficient values; colors correspond to skewness with the most and least skewed vectors highlighted. The red dots mark the Portal coefficients. 
+
+
+```{r coefficients skew}
+
+coeffs_skew <- fs_bank_mets %>%
+  select(sim, skew) %>%
+  distinct() %>%
+  right_join(fs_leg_coeffs_M, by = "sim")
+
+coeffs_skew_plot <- ggplot(data = coeffs_skew, aes(x = coeff_index, y = coeff_value, color = skew, group = sim)) + 
+  geom_line(size = .1, alpha = .2) +
+  geom_line(data = filter(coeffs_skew, skew <= quantile(coeffs_skew$skew, probs = .001)[1]), alpha = .5, size = .3) + 
+  geom_line(data = filter(coeffs_skew, skew >= quantile(coeffs_skew$skew, probs = 0.999)[1]), alpha = .5, size = .3) +
+  scale_colour_viridis_c(option = "plasma", end = .8) + 
+  theme_bw() +
+  theme(legend.position = "top")  +
+  geom_point(data = mutate(portal_leg_coeffs, sim = 1, qbin = 0, qbin_alpha = 1),
+             aes(x =coeff_index, y= coeff_value),  color = "#FF0000", show.legend = F)
+
+coeffs_skew_plot
+```
+
+There seems to be some relationship to skewness - skewness locates you in a particular part of the state space. I'm not sure what that means....
+
+#### Comparing skewness to distance from centroid
+
+The x axis is skewness and the y axis is the distance of the coefficients to the centroid. Each dot is a draw from the feasible set.  
+
+```{r compare skew to distance}
+skew_distance <- coeffs_skew %>%
+  select(sim, skew) %>%
+  distinct() %>%
+  arrange(skew) %>%
+  mutate(skew_rank = row_number()) %>%
+  left_join(fs_dist, by = "sim") %>%
+  rename(dist_rank = sim_rank)
+
+skd_plot <- ggplot(data = skew_distance, aes(x = skew, y = centroid_dist)) +
+  geom_point() +
+  theme_bw()
+
+
+skd_plot
+```
+
+
+#### Comparing rank skewness to rank distance from centroid
+
+The x axis is a vector's ranked skewness and the y axis is the ranked distance of the coefficients to the centroid. Each dot is a draw from the feasible set. The orange line is the 1:1 line.
+
+
+```{r compare skewness to rank distance}
+
+skd_rank_plot <- ggplot(data = skew_distance, aes(x = skew_rank, y = dist_rank)) + 
+  geom_point() +
+  theme_bw() +
+  geom_line(aes(x = 1:max(skew_rank), y = 1:max(skew_rank)), color ="orange")
+
+skd_rank_plot
+
+```
+
+#### Comparing distribution of skewness values to distance values
+
+The red dot on the skewness plot is Portal.
+
+```{r skew violin plot}
+skew_violin <- ggplot(data = skew_distance, aes(x = 0, y = skew)) +
+  geom_violin() +
+  geom_point(aes(x = 0, y = conditionalsads::rad_skew(portal_sad$sabund)), color = "red") +
+  theme_bw()
+
+gridExtra::grid.arrange(grobs = list(skew_violin, centroid_dist_plot), nrow = 1)
+```
+
+Skewness is not equivalent to centroid distance. 
+
+```{r portal skewness rank}
+skew_rank_percentile <- filter(skew_distance, skew <= conditionalsads::rad_skew(portal_sad$sabund))
+```
+
+Portal is *very* skewed compared to the bulk of the feasible set. Portal's skewness is `r conditionalsads::rad_skew(portal_sad$sabund)`, which is more skewed than `r (nrow(skew_rank_percentile) / nrow(skew_distance)) * 100`% of the feasible set. 
+
+```{r coefficients skew 2}
+
+coeffs_skew <- fs_bank_mets %>%
+  select(sim, skew) %>%
+  distinct() %>%
+  right_join(fs_leg_coeffs_M, by = "sim")  %>%
+  select(sim, skew, coeff_value, coeff_index) %>%
+  group_by(sim, skew) %>%
+  mutate(coeff_sd = sd(coeff_value)) %>%
+  ungroup() 
+
+coeffs_skew_ranked <- coeffs_skew %>%
+  select(sim, skew, coeff_sd) %>%
+  distinct() %>%
+  arrange(skew) %>%
+  mutate(abund_skew_rank = row_number()) %>%
+  arrange(coeff_sd) %>%
+  mutate(coeff_sd_rank = row_number()) %>%
+  ungroup()
+
+coeff_sd_plot <- ggplot(data = coeffs_skew, aes(x = coeff_index, y = coeff_value, color = coeff_sd, group = sim)) +
+  geom_line(alpha = .5) +
+  scale_color_viridis_c(end = .9) +
+  theme_bw()
+
+coeff_sd_plot
+
+rank_sd_skew_plot <- ggplot(data = coeffs_skew_ranked, aes(x = abund_skew_rank, y = coeff_sd_rank)) +
+  geom_point(alpha = .3) +
+  theme_bw()
+rank_sd_skew_plot
+
+
+sd_skew_plot <- ggplot(data = coeffs_skew_ranked, aes(x = skew, y = coeff_sd)) +
+  geom_point(alpha = .3) +
+  theme_bw() 
+
+sd_skew_plot
+
+```
