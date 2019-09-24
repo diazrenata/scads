@@ -1,0 +1,261 @@
+---
+title: "Mapping FS space"
+output: github_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+library(scads)
+library(ggplot2)
+dataset <- "small"
+```
+
+```{r get an SAD}
+if(dataset == "plants") {
+  
+  portal_sad <- portalr::plant_abundance(level = "Treatment", type = "Winter Annuals", plots = "All", unknowns = F, correct_sp = T, shape = "flat", min_quads = 16) %>%
+    filter(treatment == "control") %>%
+    select(year, species, abundance) %>%
+    filter(year == 1994) %>%
+    select(-year) %>%
+    rename(abund = abundance) %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+  nleg <- 10
+  
+} else if(dataset == "rodents94") {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1994))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+  nleg <- 5
+  
+} else {
+  portal_data <- isds::get_toy_portal_data(download=T, years = c(1990:1995))
+  
+  portal_sad <- portal_data %>%
+    select(species) %>%
+    group_by(species) %>%
+    summarize(abund = n()) %>%
+    ungroup() %>%
+    select(abund) %>%
+    arrange(abund) %>%
+    as.matrix() %>%
+    as.vector()
+  
+  nleg <- 8
+}
+
+nspp = length(portal_sad)
+nind = sum(portal_sad)
+
+portal_sad <- data.frame(
+  abund = portal_sad,
+  source = "emp",
+  rank = 1:length(portal_sad)
+)
+
+```
+
+```{r get a BUNCH of fs samples, eval = F, include=T}
+
+fs_bank <- sample_feasibleset(s = nspp, n = nind, nsamples = 10000, distinct = TRUE)
+save(fs_bank, file = "fs_bank_94.Rds")
+
+```
+
+```{r load fs bank}
+
+if(dataset == "plants") {
+  load(here::here("fs_bank_plants.Rds"))
+  nametoprint <- "Portal winter annuals 1994, 10000 draws"
+} else if(dataset == "rodents94") {
+  load(here::here("fs_bank_94.Rds"))
+  nametoprint <- "Portal control rodents 1994, 10000 draws"
+} else if(dataset == "small") {
+  load(here::here("fs_bank_small.Rds"))
+  nametoprint <- "Portal control rodents 1990-95, 100 draws"
+} else {
+  load(here::here("fs_bank.Rds"))
+  nametoprint <- "Portal control rodents 1990=95, 10000 draws"
+}
+
+```
+
+```{r manip fs_bank}
+fs_bank_M <- fs_bank %>%
+  as.data.frame() %>%
+  mutate(rank = row_number()) %>%
+  tidyr::gather(-rank, key = "sim", value = "abund") %>%
+  mutate(sim = as.integer(substr(sim, 2, nchar(sim))))
+
+```
+
+
+# This report is for `r nametoprint`. 
+
+## Density plots of raw rank abundances
+
+The y-axes are abundance (on the left) and relative abundance (on the right). Each black dot is an abundance value from a vector drawn from the feasible set. The red line plots the distribution from Portal.
+
+The black dots are semi-transparent, which makes it a little easier to see the density distribution.
+
+In this case, these plots should look identical, because all the draws from the feasible set have the same number of individuals as the Portal vector. I have at other times compared SADs without the total abundance constraint, where the rescaled plots could look quite different.
+
+```{r plot rads and rescaled rads, fig.width = 10}
+fs_dp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = abund)) + 
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_sad, aes(x = rank, y = abund), alpha = .5, color = "red") +
+  theme_bw() +
+  ggtitle("Abundance: draws from FS vs Portal")
+
+fs_bank_M <- fs_bank_M %>%
+  mutate(sabund = abund / nind)
+
+portal_sad <- portal_sad %>%
+  mutate(sabund = abund/nind)
+
+fs_sdp <- ggplot(data = fs_bank_M, aes(x =as.factor(rank), y = sabund)) + 
+  geom_point(alpha = .2, size = 1) +
+  geom_line(data = portal_sad, aes(x = rank, y = sabund), alpha = .5, color = "red") +
+  theme_bw() +
+  ggtitle("Abundance: draws from FS vs Portal, rescaled")
+
+gridExtra::grid.arrange(grobs = list(fs_dp, fs_sdp), nrow = 1) 
+```
+
+```{r skews}
+
+fs_bank_M <- fs_bank_M %>%
+  group_by(sim) %>%
+  mutate(skew = e1071::skewness(abund)) %>%
+  ungroup() %>%
+  mutate(source = "sim")
+
+portal_sad <- portal_sad %>%
+  mutate(skew = e1071::skewness(abund),
+         source = "observed",
+         sim = -99)
+
+fs_bank_M <- bind_rows(fs_bank_M, portal_sad)
+
+
+skewness_freqplot <- ggplot(data = fs_bank_M, aes(x = 0, y = skew, color = source)) +
+  geom_violin(data = filter(fs_bank_M, source == "sim")) +
+  geom_point(data = filter(fs_bank_M, source == "observed")) +
+  theme_bw() +
+  scale_color_viridis_d(end = .7)
+
+skewness_freqplot
+
+```
+
+## Distance from straight line
+
+```{r calculate magnitude of difference}
+rad <- filter(fs_bank_M, sim == 1)  %>%
+  mutate(abund = abund - 1) %>%
+  mutate(m1 = (rank - 1) * (max(abund) / (max(rank) - 1)))
+
+magplot <- ggplot(data = rad, aes(x = rank, y = abund)) +
+  geom_point() +
+  geom_point(aes(x = rank, y = m1), color = "blue") +
+  theme_bw()
+
+magplot
+```
+
+```{r plot scaled magdiffs, fig.height = 50, fig.width = 15}
+get_m1 <- function(rad) {
+  
+  rad <- sort(rad)
+  
+  s = length(rad)
+  
+  max_n = max(rad) - min(rad)
+  
+  slope = max_n / (s-1)
+  
+  m1 <-(((1:s) - 1) * slope) + min(rad)
+  
+  magdiffs <- rad - m1
+  
+  return(m1)
+}
+
+fs_bank_M <- fs_bank_M %>%
+  group_by(sim, source) %>%
+  mutate(m1 = get_m1(abund)) %>%
+  mutate(magdiff = sum(m1 - abund)) %>%
+  mutate(scaled_magdiff = magdiff / max(m1),
+         scaled_magdiff_n = magdiff/sum(portal_sad$abund),
+         scaled_magdiff_s = magdiff/max(portal_sad$rank)) %>%
+  ungroup() %>%
+  arrange(desc(scaled_magdiff), sim, rank) %>%
+  mutate(magdiff_rank =NA)
+
+
+for(i in 1:nrow(fs_bank_M)) {
+  fs_bank_M$magdiff_rank[i] <- which(unique(fs_bank_M$sim) == fs_bank_M$sim[i])
+}
+
+
+all_m1_plots <- ggplot(data = fs_bank_M, aes(x = rank, y = abund)) +
+  geom_line() +
+  geom_line(aes(x = rank, y = m1), color = "red") +
+  geom_label(aes(x = max(fs_bank_M$rank) - 2, y = 10, label = scaled_magdiff)) +
+  facet_wrap(~magdiff_rank, ncol = 5) +
+  theme_bw()
+
+all_m1_plots
+
+
+```
+
+```{r magdiff v skew, fig.height = 6, fig.width = 18}
+
+mgdiff_skew_plots <- list(
+  ggplot(data = fs_bank_M, aes(x=  skew, y = scaled_magdiff, color = source)) +
+    geom_point()+
+    theme_bw() +
+    scale_color_viridis_d(end = .8),
+  ggplot(data = fs_bank_M, aes(x=  skew, y = scaled_magdiff_n, color = source)) +
+    geom_point()+
+    theme_bw() +
+    scale_color_viridis_d(end = .8),
+  ggplot(data = fs_bank_M, aes(x=  skew, y = scaled_magdiff_s, color = source)) +
+    geom_point()+
+    theme_bw() +
+    scale_color_viridis_d(end = .8))
+
+
+gridExtra::grid.arrange(grobs = mgdiff_skew_plots, nrow =1)
+
+```
+
+
+Various ways of calculating the amount of concavity (above) look correlated to skewness but not completely...
+
+What are the appropriate rescaling or units?
+
+
+### Sum squared difference from mean
+
+What does this look like?
+
+
+### Solving graphically
+
+Usually it will be ((S - (max-min)) / 2) - (N - (S * min)), but if the vector is not consistently concave (sometimes flat) you can get situations where the sample is above the straight line. It might still be that formula though. 

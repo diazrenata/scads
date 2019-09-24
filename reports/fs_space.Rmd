@@ -8,7 +8,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(dplyr)
 library(scads)
 library(ggplot2)
-dataset <- "plants"
+dataset <- "small"
 ```
 
 ```{r get an SAD}
