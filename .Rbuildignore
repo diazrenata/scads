@@ -4,3 +4,5 @@
 ^apps/*$
 ^reports$
 ^reports/*$
+^drake$
+^drake/*$
