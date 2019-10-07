@@ -4,3 +4,6 @@
 .Ruserdata
 .DS_Store
 fs_bank*
+drake/drake_cache.sqlite
+.drake
+.drake/*
