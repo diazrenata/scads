@@ -281,3 +281,5 @@ sim_emp_plots <- ggplot(data = filter(fs_bank_div_long, variable %in% c("skew", 
 
 sim_emp_plots
 ```
+
+The position of the empirical is generally qualitatively consistent but there is variation. I think the next step is to add diversity indices to the analysis at scale in diazrenata/scadsplants. It is not very computationally expensive to bring 2 additional indices through the full analytical pipeline, and including traditional metrics alongside skewness makes this more intuitive to an ecological background. 

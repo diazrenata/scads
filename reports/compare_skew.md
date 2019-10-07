@@ -85,3 +85,5 @@ There is a general, but not perfect, relationship between skewness and other div
 ### Position of empirical within sim distributions
 
 <img src="compare_skew_files/figure-markdown_github/sim emp plots-1.png" style="display: block; margin: auto;" />
+
+The position of the empirical is generally qualitatively consistent but there is variation. I think the next step is to add diversity indices to the analysis at scale in diazrenata/scadsplants. It is not very computationally expensive to bring 2 additional indices through the full analytical pipeline, and including traditional metrics alongside skewness makes this more intuitive to an ecological background.
