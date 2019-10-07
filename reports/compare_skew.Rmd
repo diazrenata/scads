@@ -3,6 +3,7 @@ title: "Comparing different skewness calculations"
 output: github_document
 ---
 
+
 Do different methods for calculating skewness give qualitatively similar results?
 
 (For later - evenness?)
@@ -12,7 +13,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(dplyr)
 library(scads)
 library(ggplot2)
-dataset <- "plants"
+dataset <- "large"
 ```
 
 ```{r get an SAD}
@@ -93,7 +94,7 @@ if(dataset == "plants") {
   nametoprint <- "Portal control rodents 1990-95, 100 draws"
 } else {
   load(here::here("fs_bank.Rds"))
-  nametoprint <- "Portal control rodents 1990=95, 10000 draws"
+  nametoprint <- "Portal control rodents 1990-95, 10000 draws"
 }
 
 ```
@@ -140,8 +141,7 @@ fs_bank_skews <- fs_bank_M %>%
   group_by(sim, source) %>%
   summarize(skew_1 = e1071::skewness(abund, type = 1),
             skew_2 = e1071::skewness(abund, type = 2),
-            skew_3 = e1071::skewness(abund, type = 3),
-            evar = conditionalsads::evar(abund)) %>%
+            skew_3 = e1071::skewness(abund, type = 3)) %>%
   ungroup()# %>%
   #tidyr::gather(-sim, -source, key = "skew_alg", value = "skew_val")
 
@@ -149,17 +149,17 @@ fs_bank_skews <- fs_bank_M %>%
 skew_plots <- list()
 
 skew_plots[[1]] <- ggplot(data = fs_bank_skews, aes(x = skew_1, y = skew_2)) +
-  geom_point(alpha = .7) +
+  geom_point(alpha = .05) +
   theme_bw() +
   ggtitle("Skew 1 v. Skew 2")
 
 skew_plots[[2]] <- ggplot(data = fs_bank_skews, aes(x = skew_1, y = skew_3)) +
-  geom_point(alpha = .7) +
+  geom_point(alpha = .05) +
   theme_bw() +
   ggtitle("Skew 1 v. Skew 3") 
 
 skew_plots[[3]] <- ggplot(data = fs_bank_skews, aes(x = skew_2, y = skew_3)) +
-  geom_point(alpha = .7) +
+  geom_point(alpha = .05) +
   theme_bw() +
   ggtitle("Skew 2 v. Skew 3")
 
@@ -175,24 +175,22 @@ fs_bank_skews <- fs_bank_skews %>%
   arrange((skew_2)) %>%
   mutate(skew_2_rank = row_number()) %>%
   arrange((skew_3)) %>%
-  mutate(skew_3_rank = row_number()) %>%
-  arrange((evar)) %>%
-  mutate(evar_rank = row_number())
+  mutate(skew_3_rank = row_number())
 
 fs_bank_rank_plots <- list()
 
 fs_bank_rank_plots[[1]] <- ggplot(data = fs_bank_skews, aes(x = skew_1_rank, y = skew_2_rank)) +
-  geom_point(alpha = .7) +
+  geom_point(alpha = .05) +
   theme_bw() +
   ggtitle("Skew 1 v. Skew 2 Rank")
 
 fs_bank_rank_plots[[2]] <- ggplot(data = fs_bank_skews, aes(x = skew_1_rank, y = skew_3_rank)) +
-  geom_point(alpha = .7) +
+  geom_point(alpha = .05) +
   theme_bw() +
   ggtitle("Skew 1 v. Skew 3 Rank") 
 
 fs_bank_rank_plots[[3]] <- ggplot(data = fs_bank_skews, aes(x = skew_2_rank, y = skew_3_rank)) +
-  geom_point(alpha = .7) +
+  geom_point(alpha = .05) +
   theme_bw() +
   ggtitle("Skew 2 v. Skew 3 Rank")
 
@@ -209,21 +207,77 @@ all((fs_bank_skews$skew_1_rank == fs_bank_skews$skew_2_rank),
 
 ```
 
-## Skewness v Evar
-
-```{r add evar, fig.width=12}
-
-evar_skew_plot <- ggplot(data = fs_bank_skews, aes(x = skew_1, y = evar)) +
-  geom_point(alpha = .7) +
-  ggtitle("Evar v Skew 1")
 
 
-r_evar_skew_plot <- ggplot(data = fs_bank_skews, aes(x = skew_1_rank, y = evar_rank)) +
-  geom_point(alpha = .7) +
-  ggtitle("Evar v Skew 1 Rank")
+## Diversity indices
 
-gridExtra::grid.arrange(grobs = list(evar_skew_plot, r_evar_skew_plot), nrow = 1)
+Moving forward, we'll just use one skewness alogrithm. Comparing the ranks for skewness and diversity indices calculated using `vegan`:
 
-all((fs_bank_skews$skew_1_rank == fs_bank_skews$evar_rank))
+* Skewness
+* Shannon-Weiner diversity, natural log base
+* Simpson's index (1-D)
+* Fisher's alpha (not bringing this one forward - for fixed S and N, alpha does not change. This is expected because the logseries is entirely determined by S and N)
 
+
+```{r add div indices}
+library(vegan)
+
+fs_bank_div <- fs_bank_M %>%
+  group_by(sim, source) %>%
+  summarize(
+    skew = e1071::skewness(abund),
+    shannon = vegan::diversity(abund, index = "shannon", base = exp(1)),
+    simpson = vegan::diversity(abund, index = "simpson"),
+    falpha = vegan::fisher.alpha(abund)
+  ) %>%
+  ungroup() %>%
+  mutate_at(c("skew", "shannon", "simpson", "falpha"), list(rank = dense_rank)) 
+
+fs_bank_div_long <- fs_bank_div %>%
+  tidyr::gather(-sim, -source, key = "variable", value = "val")
+```
+
+
+### Diversity index 1:1 plots
+```{r rank 1 to 1 plots, fig.height = 4, fig.width = 12}
+
+skew_shannon <- ggplot(data = fs_bank_div, aes(x = skew_rank, y = shannon_rank)) +
+  geom_point(alpha = .05) +
+  geom_abline(intercept = max(fs_bank_M$sim), slope = -1) +
+  theme_bw() +
+  ggtitle("Skewness vs. Shannon")
+
+skew_simpson <-  ggplot(data = fs_bank_div, aes(x = skew_rank, y = simpson_rank)) +
+  geom_point(alpha = .05) +
+  geom_abline(intercept =  max(fs_bank_M$sim), slope = -1) +
+  theme_bw() +
+  ggtitle("Skewness vs. Simpson")
+
+shannon_simpson <-  ggplot(data = fs_bank_div, aes(x = shannon_rank, y = simpson_rank)) +
+  geom_point(alpha = .05) +
+  geom_abline(intercept = 0, slope = 1) +
+  theme_bw() +
+  ggtitle("Shannon vs. Simpson")
+
+onetoones <- gridExtra::grid.arrange(grobs = list(skew_shannon, skew_simpson, shannon_simpson), ncol = 3)
+
+onetoones
+
+```
+
+There is a general, but not perfect, relationship between skewness and other diversity indices. 
+
+
+### Position of empirical within sim distributions
+
+```{r sim emp plots, fig.width = 4, fig.height = 12, fig.align="center"}
+
+sim_emp_plots <- ggplot(data = filter(fs_bank_div_long, variable %in% c("skew", "shannon", "simpson")), aes(x = 0, y = val, color = source)) +
+  geom_violin(data = filter(fs_bank_div_long,  variable %in% c("skew", "shannon", "simpson"), source == "sampled")) +
+  geom_point(data = filter(fs_bank_div_long,  variable %in% c("skew", "shannon", "simpson"), source == "emp"), size = 2) +
+  theme_bw() +
+  scale_color_viridis_d(end = .8) +
+  facet_wrap(vars(variable), ncol = 1, scales = "free", strip.position = "top")
+
+sim_emp_plots
 ```
