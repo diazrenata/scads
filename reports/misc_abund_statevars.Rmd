@@ -1,97 +1,104 @@
 ---
 title: "Exploring statevar space"
 output: github_document
+date: 10/7/2019
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-```
-
-# Miscellaneous Abundance
-
-Elita Baldridge's community abundance dataset. 
-
-```{r load}
 library(dplyr)
 library(ggplot2)
+```
 
-ma <- MATSS::import_retriever_data("community-abundance-misc")
+Downloading the data files used in Elita Baldridge's dissertation and White et al 2012, to see what the range of S and N in those data sets was. 
 
-names(ma)
-head(ma$community_abundance_misc_main)
+```{r download Baldridge data}
 
-ma_totals <- ma$community_abundance_misc_main %>%
-  group_by(site_id) %>%
+if(!dir.exists(here::here("reports", "datasets"))) {
+  dir.create((here::here("reports", "datasets")))
+}
+
+if(FALSE) {
+  
+  download.file(url = "https://raw.githubusercontent.com/weecology/sad-comparison/master/sad-data/mcdb_spab.csv", destfile = here::here("reports", "datasets", "mcdb_spab.csv"))
+  
+  download.file(url = "https://raw.githubusercontent.com/weecology/sad-comparison/master/sad-data/bbs_spab.csv", destfile = here::here("reports", "datasets", "bbs_spab.csv"))
+  
+  download.file(url = "https://raw.githubusercontent.com/weecology/sad-comparison/master/sad-data/gentry_spab.csv", destfile = here::here("reports", "datasets", "gentry_spab.csv"))
+  
+  download.file(url = "https://raw.githubusercontent.com/weecology/sad-comparison/master/sad-data/fia_spab.csv", destfile = here::here("reports", "datasets", "fia_spab.csv"))
+  
+}
+
+```
+
+```{r load Baldridge data}
+
+sitenames <- c("mcdb", "gentry", "fia", "bbs")
+
+datasets <- list()
+
+for(i in 1:4) {
+  
+  datasets[[i]] <- read.csv(here::here("reports", "datasets", paste0(sitenames[i], "_spab.csv")), header = F,skip =2, stringsAsFactors = F)
+  
+  colnames(datasets[[i]]) <- c("site", "year", "species", "abundance")
+  
+  names(datasets)[i] <- sitenames[i]
+  
+  head(datasets[[i]])
+  
+  uniqueyears <- datasets[[i]] %>%
+    select(site, year) %>%
+    distinct() %>%
+    group_by(site) %>%
+    summarize(nyears = n()) %>%
+    ungroup() %>%
+    filter(nyears > 1)
+  
+  if(nrow(uniqueyears) > 1) {
+    print(paste0("Some ", sitenames[i], " sites have more than one year"))
+  }
+  
+  datasets[[i]] <- datasets[[i]] %>%
+    mutate(species = as.character(species))
+}
+
+alldat <- bind_rows(datasets, .id = "dataset_name")
+
+```
+
+### Statevars
+
+```{r process statevars, fig.width = 5, fig.height = 20}
+
+statevars <- alldat %>%
+  group_by(dataset_name, site) %>%
   summarize(nspp = n(),
             nind = sum(abundance)) %>%
   ungroup()
 
-
-ma_plot <- ggplot(data = ma_totals, aes(x = nspp, y = nind)) +
-  geom_point(alpha = .5) +
+statevars_plot <- ggplot(data = statevars, aes(x = nspp, y = nind)) +
+  geom_point() +
   theme_bw() +
-  ggtitle("S and N for Misc Abund Dataset")
+  facet_grid(rows = vars(dataset_name), scales = "free", switch = "y")
 
-ma_plot
-```
-
-```{r ma small}
-
-ma_small <- ma_totals %>%
-  filter(nspp <= 100,
-         nind <= 40000)
-
-ma_small_plot <- ggplot(data = ma_small, aes(x = nspp, y = nind)) +
-  geom_point(alpha = .5) +
-  theme_bw() +
-  ggtitle("S and N for Misc Abund Dataset - only small communities")
-
-ma_small_plot
+statevars_plot
 
 ```
 
-# MCDB
+### Average abundance (N/S)
 
-Mammal community database
+```{r mean abund plots, fig.width = 5, fig.height = 20}
 
-```{r mcdb}
+meanabund <- statevars %>%
+  mutate(mean_abund = nind / nspp) 
 
-mcdb <- MATSS::import_retriever_data("mammal-community-db")
-
-mcdb_totals <- mcdb$mammal_community_db_communities %>%
-  filter(presence_only == 0) %>%
-  group_by(site_id) %>%
-  summarize(nspp = n(),
-            nind = sum(abundance)) %>%
-  ungroup()
-
-mcdb_plot <- ggplot(data = mcdb_totals, aes(x = nspp, y = nind)) +
-  geom_point(alpha = .5) +
+meanabund_plot <- ggplot(data = meanabund, aes(x = 0, y = mean_abund)) +
+  geom_boxplot() +
   theme_bw() +
-  ggtitle("S and N for MCDB")
+  facet_grid(rows = vars(dataset_name), scales = "free", switch = "y")
 
-mcdb_plot
-
-```
-
-# Gentry forest transects
-
-```{r gentry}
-
-gentry <- MATSS::import_retriever_data("gentry-forest-transects")
-
-gentry_totals <- gentry$gentry_forest_transects_counts %>%
-  group_by(site_code, line) %>%
-  summarize(nspp = n(),
-            nind = sum(count)) %>%
-  ungroup()
-
-
-gentry_plot <- ggplot(data = gentry_totals, aes(x = nspp, y = nind)) +
-  geom_point(alpha = .5) +
-  theme_bw() +
-  ggtitle("S and N for Gentry")
-
-gentry_plot
+meanabund_plot
 
 ```
