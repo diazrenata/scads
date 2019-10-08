@@ -41,7 +41,8 @@ sample_plan <- drake_plan(
               transform = map(sval = !!all_combinations$S, nval = !!all_combinations$N, nbdraws = 10000, ptable = master_p_table), trigger = trigger(command = FALSE, mode = "condition")),
   
   di = target(add_dis(fs),
-              transform = map(fs))#,
+              transform = map(fs),
+              trigger = trigger(command = TRUE, mode = "condition"))#,
   # fs_list = target(MATSS::collect_analyses(list(fs)), transform = combine(fs)),
   # fs_df = target(dplyr::bind_rows(fs_list)),
   # di_list = target(MATSS::collect_analyses(list(di)), transform = combine(di)),
