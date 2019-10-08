@@ -38,14 +38,14 @@ all_combinations <- dplyr::bind_rows(small_combinations, ls_mn_combinations, ms_
 
 sample_plan <- drake_plan(
   fs = target(sample_fs_wrapper(sval, nval, ptable, nbdraws),
-              transform = map(sval = !!all_combinations$S, nval = !!all_combinations$N, nbdraws = 10000, ptable = master_p_table)),
+              transform = map(sval = !!all_combinations$S, nval = !!all_combinations$N, nbdraws = 10000, ptable = master_p_table), trigger = trigger(command = FALSE, mode = "condition")),
   
   di = target(add_dis(fs),
-              transform = map(fs)),
-  fs_list = target(MATSS::collect_analyses(list(fs)), transform = combine(fs)),
-  fs_df = target(dplyr::bind_rows(fs_list)),
-  di_list = target(MATSS::collect_analyses(list(di)), transform = combine(di)),
-  di_df = target(dplyr::bind_rows(di_list))
+              transform = map(fs))#,
+  # fs_list = target(MATSS::collect_analyses(list(fs)), transform = combine(fs)),
+  # fs_df = target(dplyr::bind_rows(fs_list)),
+  # di_list = target(MATSS::collect_analyses(list(di)), transform = combine(di)),
+  # di_df = target(dplyr::bind_rows(di_list))
 )
 
 # reports
