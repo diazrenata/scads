@@ -14,12 +14,30 @@ Number of unique elements (out of 10,000 draws)
 
 I've drawn 10,000 times from the feasible set for each of these S-N combinations. For some of them, we won't be able to get 10,000 unique elements from the feasible set because the FS is in fact much smaller than that.
 
+![](vast-space_files/figure-markdown_github/unique%20draws-1.png)![](vast-space_files/figure-markdown_github/unique%20draws-2.png)
+
 Shapes represented
 ------------------
 
--   Minimum, maximum skewness?
--   Range of skews? Sd of skews?
--   Other diversity indices? Constrain all of these by S.
+### Skewness
+
+![](vast-space_files/figure-markdown_github/skewness%20min,%20max,%20range%20plot-1.png)![](vast-space_files/figure-markdown_github/skewness%20min,%20max,%20range%20plot-2.png)
+
+### Shannon
+
+### Simpson
 
 Some sample heatmaps?
 ---------------------
+
+### Small communities
+
+![](vast-space_files/figure-markdown_github/small%20heatmap-1.png)![](vast-space_files/figure-markdown_github/small%20heatmap-2.png)
+
+### Large S, moderate N
+
+![](vast-space_files/figure-markdown_github/large%20s%20med%20N-1.png)
+
+### Large N, moderate S
+
+![](vast-space_files/figure-markdown_github/large%20n%20med%20S-1.png)
