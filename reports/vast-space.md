@@ -21,7 +21,7 @@ Shapes represented
 
 ### Skewness
 
-![](vast-space_files/figure-markdown_github/skewness%20min,%20max,%20range%20plot-1.png)![](vast-space_files/figure-markdown_github/skewness%20min,%20max,%20range%20plot-2.png)
+![](vast-space_files/figure-markdown_github/skewness%20min,%20max,%20range%20plot-1.png)
 
 ### Shannon
 

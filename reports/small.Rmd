@@ -1,0 +1,157 @@
+---
+title: "Exploring S and N space"
+output: github_document
+date: 10/8/2019
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+#library(drake)
+library(dplyr)
+library(ggplot2)
+library(scads)
+```
+
+## Combinations of S & N
+
+These are the combinations of S and N I ran sampling on. There are three chunks: small, large S, and large N. Small is to get at behavior for very small S and N. Large S and large N explore larger communities in those directions. The bottom right corner is gently constrained because N must be >= to S. I tried to explore the general regions of space filled by the datasets in the Baldridge/White papers. I've done this edges-approach because is computationally expensive to explore the large S-large N corner, and there aren't datasets there. 
+
+```{r S and N combos}
+
+small_s <- c(2:10)
+small_n <-  c(2:19, seq(20, 200, by = 10))
+
+small_combinations <- expand.grid(S = small_s, N = small_n) %>%
+  dplyr::filter(N > S)
+
+combinations_plot <- ggplot(data = small_combinations, aes(x = S, y = N)) +
+  geom_point() +
+  theme_bw() +
+  scale_color_viridis_d(end = .8)
+
+combinations_plot
+
+```
+
+
+## Number of unique elements (out of 10,000 draws)
+
+I've drawn 10,000 times from the feasible set for each of these S-N combinations. For some of them, we won't be able to get 10,000 unique elements from the feasible set because the FS is in fact much smaller than that. 
+
+```{r unique draws}
+di_df <- read.csv(here::here("drake", "di_df.csv"), stringsAsFactors = F)
+
+ndraws <- di_df %>%
+  select(S, N, sim) %>%
+  distinct() %>%
+  group_by(S, N) %>%
+  summarize(nsamples = n()) %>%
+  ungroup() %>%
+  mutate(log_nsamples = log(nsamples)) %>%
+  right_join(small_combinations, by = c("S", "N"))
+
+ndraws_plot <- ggplot(data = ndraws, aes(x = S, y = N, color = log_nsamples)) +
+  geom_point(alpha = .6) +
+  theme_bw() +
+  scale_color_viridis_c(end = .8, direction = -1, option = "magma")
+
+ndraws_plot
+
+
+```
+
+```{r sparse small}
+
+small_df <- small_combinations %>%
+  left_join(di_df, by = c("S", "N")) %>%
+  select(-X)
+
+sparse_small <- bind_rows(
+  filter(small_df, S == 2),
+  filter(small_df, N < 50)
+) %>%
+  distinct() %>%
+  filter(N %in% seq(4, 200, by = 4)) %>%
+  filter(N %in% c(0:40, 100, 200))
+
+sparse_small_toplot <- sparse_small %>%
+  select(S, N) %>%
+  distinct()
+
+sparse_small_demoplot <- ggplot(data = sparse_small_toplot, aes(x = S, y = N)) +
+  geom_point() +
+  theme_bw()
+
+sparse_small_demoplot
+
+```
+
+## Shapes represented
+
+```{r shapes math} 
+
+di_df_M <- small_df %>%
+  tidyr::gather(-sn_combination, -source, -S, -N, -sim, key = "variable", value = "val") %>%
+  mutate(nspp = as.factor(S),
+         nind = as.factor(N)) %>%
+  filter(N %% 2 == 0) %>%
+  group_by(S, N, variable) %>%
+  mutate(col_val = mean(val, na.rm = T)) %>%
+  ungroup() 
+
+#di_df_M$col_val[ which(is.na(di_df_M$col_val))] <- 0
+
+```
+
+### Skewness
+
+```{r skew violins, fig.height = 25, fig.width = 10}
+
+skew_violins <- ggplot(data = filter(di_df_M, variable == "skew"), aes(x = 0, y = val, color = col_val, fill = col_val)) +
+  geom_violin() +
+  geom_point(data = filter(di_df_M, variable == "skew", S == 2)) +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "fixed", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8) +
+   scale_fill_viridis_c(option = "plasma", end = .8) 
+
+skew_violins
+
+```
+
+
+### Shannon
+
+```{r shannon violins, fig.height = 25, fig.width = 10}
+
+shannon_violins <- ggplot(data = filter(di_df_M, variable == "shannon"), aes(x = 0, y = val, color = col_val, fill = col_val)) +
+  geom_violin() +
+  geom_point(data = filter(di_df_M, variable == "shannon", S == 2)) +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "fixed", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8) +
+   scale_fill_viridis_c(option = "plasma", end = .8) 
+
+shannon_violins
+
+```
+
+### Simpson
+
+
+```{r simpson violins, fig.height = 25, fig.width = 10}
+
+simpson_violins <- ggplot(data = filter(di_df_M, variable == "simpson"), aes(x = 0, y = val, color = col_val, fill = col_val)) +
+  geom_violin() +
+  geom_point(data = filter(di_df_M, variable == "simpson", S == 2)) +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "fixed", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8) +
+   scale_fill_viridis_c(option = "plasma", end = .8) 
+
+simpson_violins
+
+```

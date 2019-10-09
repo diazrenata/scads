@@ -7,3 +7,5 @@ fs_bank*
 drake/drake-cache.sqlite
 .drake
 .drake/*
+drake/di_df.csv
+drake/fs_df.csv
