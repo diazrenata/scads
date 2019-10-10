@@ -18,21 +18,19 @@ I've drawn 10,000 times from the feasible set for each of these S-N combinations
 
 ![](small_files/figure-markdown_github/sparse%20small-1.png)
 
-Shapes represented
-------------------
+Shapes represented - violins
+----------------------------
 
-### Skewness
+Generally, for the small combinations, it looks like
 
-    ## Warning: Removed 69 rows containing non-finite values (stat_ydensity).
+-   the mean value of whatever index increases with increasing S (2:10)
+-   the lower tail of the index gets longer with increasing N (4:200)
+-   the tails taper more sharply for Shannon & Simpson than for skewness
+-   Skewness seems to behave a little counterintuitively. It appears to *increase* with increasing S; very low S has near-0 skewness. For a given S, the mean skewness decreases with increasing N, and the tail gets longer. Within the scope of strictly increasing RADs, *the larger the skewness, the longer the rare tail in the SAD*.
 
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
+For S=2, skewness is always 0. I have removed those plots.
 
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
+    ## Warning: Removed 16 rows containing non-finite values (stat_ydensity).
 
     ## Warning in max(data$density): no non-missing arguments to max; returning -
     ## Inf
@@ -45,24 +43,25 @@ Shapes represented
 
     ## Warning in max(data$density): no non-missing arguments to max; returning -
     ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning: Removed 27 rows containing missing values (geom_point).
 
 ![](small_files/figure-markdown_github/skew%20violins-1.png)
 
-### Shannon
+    ## Warning in max(data$density): no non-missing arguments to max; returning -
+    ## Inf
+
+    ## Warning in max(data$density): no non-missing arguments to max; returning -
+    ## Inf
+
+    ## Warning in max(data$density): no non-missing arguments to max; returning -
+    ## Inf
+
+    ## Warning in max(data$density): no non-missing arguments to max; returning -
+    ## Inf
+
+    ## Warning in max(data$density): no non-missing arguments to max; returning -
+    ## Inf
+
+![](small_files/figure-markdown_github/skew%20violins-2.png)
 
     ## Warning in max(data$density): no non-missing arguments to max; returning -
     ## Inf
@@ -79,47 +78,9 @@ Shapes represented
     ## Warning in max(data$density): no non-missing arguments to max; returning -
     ## Inf
 
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
+![](small_files/figure-markdown_github/skew%20violins-3.png)
 
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
+Multipanel heatmaps
+-------------------
 
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-![](small_files/figure-markdown_github/shannon%20violins-1.png)
-
-### Simpson
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-    ## Warning in max(data$density): no non-missing arguments to max; returning -
-    ## Inf
-
-![](small_files/figure-markdown_github/simpson%20violins-1.png)
+![](small_files/figure-markdown_github/heatmaps-1.png)![](small_files/figure-markdown_github/heatmaps-2.png)![](small_files/figure-markdown_github/heatmaps-3.png)

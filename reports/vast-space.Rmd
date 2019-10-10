@@ -22,7 +22,10 @@ small_s <- c(2:10)
 small_n <-  c(2:19, seq(20, 200, by = 10))
 
 small_combinations <- expand.grid(S = small_s, N = small_n) %>%
-  dplyr::filter(N > S)
+  dplyr::filter(N > S) %>%
+  filter(N %in% seq(4, 200, by = 4)) %>%
+  filter(N %in% c(0:40, 100, 140, 160, 200))
+
 
 large_s <- c(10, 20, 30, seq(50, 250, by = 50))
 moderate_n <- seq(50, 250, by = 50)
@@ -104,16 +107,16 @@ I've drawn 10,000 times from the feasible set for each of these S-N combinations
 di_df <- read.csv(here::here("drake", "di_df.csv"), stringsAsFactors = F)
 
 ndraws <- di_df %>%
-  select(S, N, sim) %>%
+  select(S, N, sim, -X) %>%
   distinct() %>%
   group_by(S, N) %>%
   summarize(nsamples = n()) %>%
   ungroup() %>%
   mutate(log_nsamples = log(nsamples)) %>%
-  left_join(all_combinations, by = c("S", "N"))
+  inner_join(all_combinations, by = c("S", "N"))
 
 ndraws_plot <- ggplot(data = ndraws, aes(x = S, y = N, color = log_nsamples)) +
-  geom_point(alpha = .6) +
+  geom_point() +
   theme_bw() +
   scale_color_viridis_c(end = .8, direction = -1, option = "magma")
 
@@ -126,88 +129,81 @@ ndraws_plot_zoomed
 
 ```
 
-## Shapes represented
+## Shapes represented - violins
 
-### Skewness
+Generally, for the small combinations, it looks like
 
-```{r skewness min, max, range plot, fig.width = 15, fig.height = 5} 
+* the mean value of whatever index increases with increasing S (2:10)
+* the lower tail of the index gets longer with increasing N (4:200)
+* the tails taper more sharply for Shannon & Simpson than for skewness
+* Skewness seems to behave a little counterintuitively. It appears to _increase_ with increasing S; very low S has near-0 skewness. For a given S, the mean skewness decreases with increasing N, and the tail gets longer. Within the scope of strictly increasing RADs, *the larger the skewness, the longer the rare tail in the SAD*. 
+
+```{r violins, fig.width = 12, fig.height = 12} 
 
 di_df_M <- di_df %>%
-  group_by(sn_combination, source, S, N) %>%
-  summarize_at(.vars = c("skew", "shannon", "simpson"), .funs = list("min" = min, "max" = max, "sd" = sd, "mean" = mean)) %>%
+  select(-X, -source) %>%
+  inner_join(all_combinations, by = c("S", "N")) %>%
+  tidyr::gather(-sn_combination, -source, -S, -N, -sim, key = "variable", value = "val") %>%
+  mutate(nspp = as.factor(S),
+         nind = as.factor(N)) %>%
+  group_by(S, N, variable) %>%
+  mutate(col_val = mean(val, na.rm = T)) %>%
   ungroup() %>%
-  mutate(
-    shannon_range = shannon_max - shannon_min,
-    simpson_range = simpson_max - simpson_min,
-    skew_range = skew_max - skew_min
-  ) %>%
-  tidyr::gather(-sn_combination, -source, -S, -N, key = "variable", value = "val")
+  group_by(S, N) %>%
+  mutate(alpha_val = max(sim) / 10000) 
 
-range_plots <- lapply(as.matrix(c("skew_range", "simpson_range", "shannon_range")), FUN = function(var_name) 
-  return(ggplot(data = filter(di_df_M, variable  == var_name), aes(x =S, y = N, color = val)) +
-           geom_point() +
-           theme_bw() +
-           scale_color_viridis_c(end = .8, option = "magma") +
-           ggtitle(var_name))
-)
 
-gridExtra::grid.arrange(grobs = range_plots, nrow = 1)
+skew_violins <- ggplot(data = filter(di_df_M, variable == "skew", S > 2), aes(x = 0, y = val, color = col_val, fill = col_val, alpha = alpha_val)) +
+  geom_violin() +
+ # geom_point(data = filter(di_df_M, variable == "skew", S == 2)) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        panel.spacing = unit(.001, "lines"),
+        strip.text = element_text(size = 12)) +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "fixed", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8) +
+   scale_fill_viridis_c(option = "plasma", end = .8) +
+  ggtitle("Skew violins")
+
+suppressWarnings(print(skew_violins))
+
+
+shannon_violins <- ggplot(data = filter(di_df_M, variable == "shannon"), aes(x = 0, y = val, color = col_val, fill = col_val, alpha = alpha_val)) +
+  geom_violin() +
+ geom_point(data = filter(di_df_M, variable == "skew", S == 2)) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        panel.spacing = unit(.001, "lines"),
+        strip.text = element_text(size = 12)) +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "fixed", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8) +
+   scale_fill_viridis_c(option = "plasma", end = .8) +
+  ggtitle("Shannon violins")
+
+suppressWarnings(print(shannon_violins))
+
+
+simpson_violins <- ggplot(data = filter(di_df_M, variable == "simpson"), aes(x = 0, y = val, color = col_val, fill = col_val, alpha = alpha_val)) +
+  geom_violin() +
+geom_point(data = filter(di_df_M, variable == "skew", S == 2)) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        panel.spacing = unit(.001, "lines"),
+        strip.text = element_text(size = 12)) +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "fixed", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8) +
+   scale_fill_viridis_c(option = "plasma", end = .8) +
+  ggtitle("Simpson violins")
+
+suppressWarnings(print(simpson_violins))
+
 ```
 
 
 
-### Shannon
-
-### Simpson
-
-## Some sample heatmaps?
-
-### Small communities
-
-```{r small heatmap}
-
-loadd(fs_3_9_10000_master_p_table, cache = cache)
-tiny_plot <- ggplot(data = fs_3_9_10000_master_p_table, aes(x =rank, y = abund, color = as.factor(sim))) +
-  geom_line(alpha = .7, aes(group = sim)) +
-  theme_bw() +
-  ggtitle("S = 3, N = 9")
-tiny_plot
-
-loadd(fs_7_40_10000_master_p_table, cache = cache)
-
-small_plot <- ggplot(data = fs_7_40_10000_master_p_table, aes(x =rank, y = abund)) +
-  geom_point(alpha = .05) +
-  theme_bw() +
-  ggtitle("S = 7, N = 40")
-
-small_plot
-
-```
-
-### Large S, moderate N
-
-```{r large s med N}
-loadd(fs_100_200_10000_master_p_table, cache = cache)
-
-largeS_plot <- ggplot(data = filter(fs_100_200_10000_master_p_table, sim < 1000), aes(x =rank, y = abund)) +
-  geom_point(alpha = .01) +
-  theme_bw() +
-  ggtitle("S = 100, N = 200")
-
-largeS_plot
-```
-
-### Large N, moderate S
-
-```{r large n med S}
-
-loadd(fs_30_5000_10000_master_p_table, cache = cache)
-
-largeN_plot <- ggplot(data = filter(fs_30_5000_10000_master_p_table, sim < 1000), aes(x =rank, y = abund)) +
-  geom_point(alpha = .01) +
-  theme_bw() +
-  ggtitle("S = 30, N = 5000")
-
-largeN_plot
-
-```
