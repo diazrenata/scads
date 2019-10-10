@@ -32,6 +32,33 @@ if(FALSE) {
 
 ```
 
+Condit et al data: https://datadryad.org/stash/dataset/doi:10.15146/R3MM4V 
+Condit, Richard et al. (2018), Tree species abundance through time in tropical forest census plots, Panama, DataONE, Dataset, https://doi.org/10.15146/R3MM4V
+
+
+```{r get Condit data}
+
+conditNames <- c("bci", "cocoli", "sherman")
+
+conditDat <- list()
+
+for(i in 1:3) {
+  conditDat[[i]] <- read.csv(here::here("reports", "datasets", "condit_raw", paste0(conditNames[i], "AbundTable.csv")), stringsAsFactors = F) %>%
+    select(-Family, -Authority) %>%
+    tidyr::gather(-Latin, key = "year", value = "abundance") %>%
+    mutate(year = as.integer(substr(year, 2, 5))) %>%
+    rename(species = Latin) %>%
+    filter(abundance > 0)
+}
+
+names(conditDat) <- conditNames
+
+conditDat <- bind_rows(conditDat, .id = "dataset_name")
+
+
+```
+
+
 ```{r load Baldridge data}
 
 sitenames <- c("mcdb", "gentry", "fia", "bbs")
@@ -64,7 +91,10 @@ for(i in 1:4) {
     mutate(species = as.character(species))
 }
 
-alldat <- bind_rows(datasets, .id = "dataset_name")
+alldat <- bind_rows(datasets, .id = "dataset_name") %>%
+  mutate(year = 1800)
+
+alldat <- bind_rows(alldat, conditDat)
 
 ```
 
@@ -73,15 +103,17 @@ alldat <- bind_rows(datasets, .id = "dataset_name")
 ```{r process statevars, fig.width = 5, fig.height = 20}
 
 statevars <- alldat %>%
-  group_by(dataset_name, site) %>%
+  group_by(dataset_name, site, year) %>%
   summarize(nspp = n(),
             nind = sum(abundance)) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(year = as.factor(year))
 
-statevars_plot <- ggplot(data = statevars, aes(x = nspp, y = nind)) +
+statevars_plot <- ggplot(data = statevars, aes(x = nspp, y = nind, color = year)) +
   geom_point() +
   theme_bw() +
-  facet_grid(rows = vars(dataset_name), scales = "free", switch = "y")
+  facet_grid(rows = vars(dataset_name), scales = "free", switch = "y") +
+  scale_color_viridis_d(end = .8)
 
 statevars_plot
 
