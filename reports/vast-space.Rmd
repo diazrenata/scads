@@ -206,4 +206,32 @@ suppressWarnings(print(simpson_violins))
 ```
 
 
+```{r dotplots, fig.height = 50, fig.width =4}
+simpson_dotplots <- ggplot(data = filter(di_df_M, variable == "simpson"), aes(x = N, y = val)) +
+geom_point(alpha = .01) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        panel.spacing = unit(.001, "lines")#,
+        #strip.text = element_text(size = 12)) 
+        ) +
+  facet_wrap(vars(nspp), scales = "free_y", ncol = 1, strip.position = "top") +
+  ggtitle("Simpson dotplots")
 
+simpson_dotplots
+
+
+skew_dotplots <- ggplot(data = filter(di_df_M, variable == "skew"), aes(x = N, y = val)) +
+geom_point(alpha = .01) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        panel.spacing = unit(.001, "lines")#,
+        #strip.text = element_text(size = 12)) 
+        ) +
+  facet_wrap(vars(nspp), scales = "free_y", ncol = 1, strip.position = "top") +
+  ggtitle("skew dotplots")
+
+skew_dotplots
+```
+
+Q: Why, for a given number of species, does adding individuals increase diversity and decrease skewness?
+A: The diversity indices are definitely sensitive to N. I'm not sure about skewness. 

@@ -27,3 +27,11 @@ Generally, for the small combinations, it looks like
 -   Skewness seems to behave a little counterintuitively. It appears to *increase* with increasing S; very low S has near-0 skewness. For a given S, the mean skewness decreases with increasing N, and the tail gets longer. Within the scope of strictly increasing RADs, *the larger the skewness, the longer the rare tail in the SAD*.
 
 ![](vast-space_files/figure-markdown_github/violins-1.png)![](vast-space_files/figure-markdown_github/violins-2.png)![](vast-space_files/figure-markdown_github/violins-3.png)
+
+![](vast-space_files/figure-markdown_github/dotplots-1.png)
+
+    ## Warning: Removed 27 rows containing missing values (geom_point).
+
+![](vast-space_files/figure-markdown_github/dotplots-2.png)
+
+Q: Why, for a given number of species, does adding individuals increase diversity and decrease skewness? A: The diversity indices are definitely sensitive to N. I'm not sure about skewness.
