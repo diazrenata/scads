@@ -9,3 +9,4 @@ drake/drake-cache.sqlite
 .drake/*
 drake/di_df.csv
 drake/fs_df.csv
+drake/fs_df_first1000.csv

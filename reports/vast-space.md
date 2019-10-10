@@ -16,28 +16,14 @@ I've drawn 10,000 times from the feasible set for each of these S-N combinations
 
 ![](vast-space_files/figure-markdown_github/unique%20draws-1.png)![](vast-space_files/figure-markdown_github/unique%20draws-2.png)
 
-Shapes represented
-------------------
+Shapes represented - violins
+----------------------------
 
-### Skewness
+Generally, for the small combinations, it looks like
 
-![](vast-space_files/figure-markdown_github/skewness%20min,%20max,%20range%20plot-1.png)
+-   the mean value of whatever index increases with increasing S (2:10)
+-   the lower tail of the index gets longer with increasing N (4:200)
+-   the tails taper more sharply for Shannon & Simpson than for skewness
+-   Skewness seems to behave a little counterintuitively. It appears to *increase* with increasing S; very low S has near-0 skewness. For a given S, the mean skewness decreases with increasing N, and the tail gets longer. Within the scope of strictly increasing RADs, *the larger the skewness, the longer the rare tail in the SAD*.
 
-### Shannon
-
-### Simpson
-
-Some sample heatmaps?
----------------------
-
-### Small communities
-
-![](vast-space_files/figure-markdown_github/small%20heatmap-1.png)![](vast-space_files/figure-markdown_github/small%20heatmap-2.png)
-
-### Large S, moderate N
-
-![](vast-space_files/figure-markdown_github/large%20s%20med%20N-1.png)
-
-### Large N, moderate S
-
-![](vast-space_files/figure-markdown_github/large%20n%20med%20S-1.png)
+![](vast-space_files/figure-markdown_github/violins-1.png)![](vast-space_files/figure-markdown_github/violins-2.png)![](vast-space_files/figure-markdown_github/violins-3.png)

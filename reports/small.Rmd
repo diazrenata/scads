@@ -66,13 +66,9 @@ small_df <- small_combinations %>%
   left_join(di_df, by = c("S", "N")) %>%
   select(-X)
 
-sparse_small <- bind_rows(
-  filter(small_df, S == 2),
-  filter(small_df, N < 50)
-) %>%
-  distinct() %>%
+sparse_small <- small_df %>%
   filter(N %in% seq(4, 200, by = 4)) %>%
-  filter(N %in% c(0:40, 100, 200))
+  filter(N %in% c(0:40, 100, 140, 160, 200))
 
 sparse_small_toplot <- sparse_small %>%
   select(S, N) %>%
@@ -86,72 +82,130 @@ sparse_small_demoplot
 
 ```
 
-## Shapes represented
+## Shapes represented - violins
+
+Generally, for the small combinations, it looks like
+
+* the mean value of whatever index increases with increasing S (2:10)
+* the lower tail of the index gets longer with increasing N (4:200)
+* the tails taper more sharply for Shannon & Simpson than for skewness
+* Skewness seems to behave a little counterintuitively. It appears to _increase_ with increasing S; very low S has near-0 skewness. For a given S, the mean skewness decreases with increasing N, and the tail gets longer. Within the scope of strictly increasing RADs, *the larger the skewness, the longer the rare tail in the SAD*. 
 
 ```{r shapes math} 
 
-di_df_M <- small_df %>%
+di_df_M <- sparse_small %>%
   tidyr::gather(-sn_combination, -source, -S, -N, -sim, key = "variable", value = "val") %>%
   mutate(nspp = as.factor(S),
          nind = as.factor(N)) %>%
-  filter(N %% 2 == 0) %>%
   group_by(S, N, variable) %>%
   mutate(col_val = mean(val, na.rm = T)) %>%
-  ungroup() 
+  ungroup() %>%
+  group_by(S, N) %>%
+  mutate(alpha_val = max(sim) / 10000)
 
 #di_df_M$col_val[ which(is.na(di_df_M$col_val))] <- 0
 
 ```
 
-### Skewness
+For S=2, skewness is always 0. I have removed those plots.
 
-```{r skew violins, fig.height = 25, fig.width = 10}
+```{r skew violins, fig.height = 8, fig.width = 8}
 
-skew_violins <- ggplot(data = filter(di_df_M, variable == "skew"), aes(x = 0, y = val, color = col_val, fill = col_val)) +
+skew_violins <- ggplot(data = filter(di_df_M, variable == "skew", S > 2), aes(x = 0, y = val, color = col_val, fill = col_val, alpha = alpha_val)) +
   geom_violin() +
-  geom_point(data = filter(di_df_M, variable == "skew", S == 2)) +
+ # geom_point(data = filter(di_df_M, variable == "skew", S == 2)) +
   theme_bw() +
   theme(panel.grid = element_blank()) +
   facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "fixed", as.table = F) +
   scale_color_viridis_c(option = "plasma", end = .8) +
-   scale_fill_viridis_c(option = "plasma", end = .8) 
+   scale_fill_viridis_c(option = "plasma", end = .8) +
+  ggtitle("Skew violins")
 
 skew_violins
 
-```
 
-
-### Shannon
-
-```{r shannon violins, fig.height = 25, fig.width = 10}
-
-shannon_violins <- ggplot(data = filter(di_df_M, variable == "shannon"), aes(x = 0, y = val, color = col_val, fill = col_val)) +
+shannon_violins <- ggplot(data = filter(di_df_M, variable == "shannon"), aes(x = 0, y = val, color = col_val, fill = col_val, alpha = alpha_val)) +
   geom_violin() +
   geom_point(data = filter(di_df_M, variable == "shannon", S == 2)) +
   theme_bw() +
   theme(panel.grid = element_blank()) +
   facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "fixed", as.table = F) +
   scale_color_viridis_c(option = "plasma", end = .8) +
-   scale_fill_viridis_c(option = "plasma", end = .8) 
+   scale_fill_viridis_c(option = "plasma", end = .8)  +
+  ggtitle("Shannon violins")
 
 shannon_violins
 
-```
-
-### Simpson
-
-
-```{r simpson violins, fig.height = 25, fig.width = 10}
-
-simpson_violins <- ggplot(data = filter(di_df_M, variable == "simpson"), aes(x = 0, y = val, color = col_val, fill = col_val)) +
+simpson_violins <- ggplot(data = filter(di_df_M, variable == "simpson"), aes(x = 0, y = val, color = col_val, fill = col_val, alpha = alpha_val)) +
   geom_violin() +
   geom_point(data = filter(di_df_M, variable == "simpson", S == 2)) +
   theme_bw() +
-  theme(panel.grid = element_blank()) +
+  theme(panel.grid = element_blank() ) +
   facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "fixed", as.table = F) +
   scale_color_viridis_c(option = "plasma", end = .8) +
-   scale_fill_viridis_c(option = "plasma", end = .8) 
+   scale_fill_viridis_c(option = "plasma", end = .8)  +
+  ggtitle("Simpson violins")
 
 simpson_violins
+
+```
+
+## Multipanel heatmaps
+
+```{r handle fs_df}
+
+fs_df <- read.csv(here::here("drake", "fs_df_first1000.csv"), stringsAsFactors = F)
+
+fs_df <- fs_df %>%
+  right_join(sparse_small, by = c("sim", "S", "N", "source"))
+
+fs_df_M <- fs_df %>%
+  select(-sn_combination.x, -sn_combination.y) %>%
+  filter(sim <= 1000) %>%
+  group_by(S, N) %>%
+  mutate(alphaval = 1/max(sim)) %>%
+  ungroup() %>%
+  mutate(nind = as.factor(N),
+         nspp = as.factor(S))
+
+```
+
+```{r heatmaps}
+
+
+simp_heatmap <- ggplot(data = fs_df_M, aes(x = rank, y = abund, color = simpson, group = sim, alpha = alphaval)) +
+  geom_line(size = .1) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        legend.position = "none") +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "free", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8) +
+  ggtitle("Simpson heatmap")
+
+simp_heatmap
+
+
+shannon_heatmap <- ggplot(data = fs_df_M, aes(x = rank, y = abund, color = shannon, group = sim, alpha = alphaval)) +
+  geom_line(size = .1) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        legend.position = "none") +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "free", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8) +
+  ggtitle("Shannon heatmap")
+
+shannon_heatmap
+
+
+skew_heatmap <- ggplot(data = fs_df_M, aes(x = rank, y = abund, color = skew, group = sim, alpha = alphaval)) +
+  geom_line(size = .1) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        legend.position = "none") +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "free", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8) +
+  ggtitle("Skew heatmap")
+
+skew_heatmap
 
 ```
