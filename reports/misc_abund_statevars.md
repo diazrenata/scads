@@ -8,7 +8,13 @@ Condit et al data: <https://datadryad.org/stash/dataset/doi:10.15146/R3MM4V> Con
 
 ### Statevars
 
-![](misc_abund_statevars_files/figure-markdown_github/process%20statevars-1.png)
+Broken out by site, BCI and Sherman (another of the Condit datasets) have *way* more individuals (and, by a smaller margin, species) than the other datasets. I think it may not be feasible to sample the BCI SADs. It may be possible to do Sherman (pending some trials on the hpg).
+
+![](misc_abund_statevars_files/figure-markdown_github/statevars%20together-1.png)
+
+Broken out into the different sites - color is now *year*.
+
+![](misc_abund_statevars_files/figure-markdown_github/statevars%20facetted-1.png)
 
 ### Average abundance (N/S)
 

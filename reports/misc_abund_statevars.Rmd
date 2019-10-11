@@ -100,22 +100,38 @@ alldat <- bind_rows(alldat, conditDat)
 
 ### Statevars
 
-```{r process statevars, fig.width = 5, fig.height = 20}
+Broken out by site, BCI and Sherman (another of the Condit datasets) have *way* more individuals (and, by a smaller margin, species) than the other datasets. I think it may not be feasible to sample the BCI SADs. It may be possible to do Sherman (pending some trials on the hpg).
 
+```{r process statevars}
 statevars <- alldat %>%
   group_by(dataset_name, site, year) %>%
   summarize(nspp = n(),
             nind = sum(abundance)) %>%
   ungroup() %>%
   mutate(year = as.factor(year))
+```
 
-statevars_plot <- ggplot(data = statevars, aes(x = nspp, y = nind, color = year)) +
+```{r statevars together, fig.width = 10, fig.height = 10}
+statevars_plot <- ggplot(data = statevars, aes(x = nspp, y = nind, color = dataset_name)) +
+  geom_point() +
+  theme_bw() +
+  scale_color_viridis_d(option = "magma", end = .8)
+
+statevars_plot
+```
+
+
+Broken out into the different sites - color is now *year*.
+
+
+```{r statevars facetted, fig.width = 5, fig.height = 20}
+statevars_plot_facets <- ggplot(data = statevars, aes(x = nspp, y = nind, color = year)) +
   geom_point() +
   theme_bw() +
   facet_grid(rows = vars(dataset_name), scales = "free", switch = "y") +
   scale_color_viridis_d(end = .8)
 
-statevars_plot
+statevars_plot_facets
 
 ```
 
