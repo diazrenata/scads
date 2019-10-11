@@ -10,6 +10,7 @@ library(drake)
 library(dplyr)
 library(ggplot2)
 library(scads)
+full <- FALSE
 ```
 
 ## Combinations of S & N
@@ -54,15 +55,12 @@ combinations_plots_zoomed <- combinations_plot +
 combinations_plots_zoomed
 ```
 
-```{r cache}
+```{r cached objects manip, eval = F}
 
 ## Set up the cache and config
 db <- DBI::dbConnect(RSQLite::SQLite(), here::here("drake", "drake-cache.sqlite"))
 cache <- storr::storr_dbi("datatable", "keystable", db)
 
-```
-
-```{r cached objects manip, eval = F}
 cached_fs <- cached(cache=cache) [which(substr(cached(cache=cache), 0, 2) == "fs")]
 fs_S <- vapply(as.matrix(cached_fs), FUN = function(aword) return(as.integer(unlist(strsplit(aword, "_")[[1]][[2]]))), FUN.VALUE = 10)
 fs_N <- vapply(as.matrix(cached_fs), FUN = function(aword) return(as.integer(unlist(strsplit(aword, "_")[[1]][[3]]))), FUN.VALUE = 10)
@@ -90,9 +88,14 @@ rm(di_list)
 rm(cached_fs)
 rm(cached_di)
 
-write.csv(fs_df, file = here::here("drake", "fs_df.csv"))
+write.csv(fs_df, file = here::here("drake", "fs_df.csv"), row.names= F)
 
-write.csv(di_df, file = here::here("drake", "di_df.csv"))
+fs_df_1000 <- filter(fs_df, sim <= 1000)
+
+write.csv(fs_df_1000, file = here::here("drake", "fs_df_first1000.csv"), row.names= F)
+
+
+write.csv(di_df, file = here::here("drake", "di_df.csv"), row.names = F)
 
 
 ```
@@ -104,10 +107,15 @@ write.csv(di_df, file = here::here("drake", "di_df.csv"))
 I've drawn 10,000 times from the feasible set for each of these S-N combinations. For some of them, we won't be able to get 10,000 unique elements from the feasible set because the FS is in fact much smaller than that. 
 
 ```{r unique draws}
+if(full) {
 di_df <- read.csv(here::here("drake", "di_df.csv"), stringsAsFactors = F)
+} else {
+  di_df <- read.csv(here::here("drake", "di_df_first1000.csv"), stringsAsFactors = F) %>%
+    filter(sim <= 100)
 
+}
 ndraws <- di_df %>%
-  select(S, N, sim, -X) %>%
+  select(S, N, sim) %>%
   distinct() %>%
   group_by(S, N) %>%
   summarize(nsamples = n()) %>%
@@ -141,7 +149,7 @@ Generally, for the small combinations, it looks like
 ```{r violins, fig.width = 12, fig.height = 12} 
 
 di_df_M <- di_df %>%
-  select(-X, -source) %>%
+  select(-source) %>%
   inner_join(all_combinations, by = c("S", "N")) %>%
   tidyr::gather(-sn_combination, -source, -S, -N, -sim, key = "variable", value = "val") %>%
   mutate(nspp = as.factor(S),
@@ -235,3 +243,8 @@ skew_dotplots
 
 Q: Why, for a given number of species, does adding individuals increase diversity and decrease skewness?
 A: The diversity indices are definitely sensitive to N. I'm not sure about skewness. 
+
+## Heatmaps
+
+```{r prep heatmap data}
+```
