@@ -110,8 +110,7 @@ I've drawn 10,000 times from the feasible set for each of these S-N combinations
 if(full) {
 di_df <- read.csv(here::here("drake", "di_df.csv"), stringsAsFactors = F)
 } else {
-  di_df <- read.csv(here::here("drake", "di_df_first1000.csv"), stringsAsFactors = F) %>%
-    filter(sim <= 100)
+  di_df <- read.csv(here::here("drake", "di_df_first1000.csv"), stringsAsFactors = F)
 
 }
 ndraws <- di_df %>%
@@ -246,5 +245,127 @@ A: The diversity indices are definitely sensitive to N. I'm not sure about skewn
 
 ## Heatmaps
 
-```{r prep heatmap data}
+```{r prep heatmap data, fig.width = 15, fig.height = 15}
+
+if(full) {
+fs_df <- read.csv(here::here("drake", "fs_df.csv"), stringsAsFactors = F)
+} else {
+  fs_df <- read.csv(here::here("drake", "fs_df_first1000.csv"), stringsAsFactors = F)
+}
+
+fs_df_M <- fs_df %>%
+  select(-source) %>%
+  filter(!(grepl(sn_combination, pattern = "table_2"))) %>%
+  mutate(sn_combination = paste0("di_", sn_combination)) %>%
+  left_join(di_df, by = c("S", "N", "sim", "sn_combination")) %>%
+  select(-sn_combination, -source) %>%
+  left_join(all_combinations, by = c("S", "N")) %>%
+  mutate(nind = as.factor(N),
+         nspp = as.factor(S)) %>%
+  filter(!is.na(source))
+
+skew_heatmaps <- list()
+
+combos <- unique(fs_df_M$source)
+
+skewlims <- c(min(fs_df_M$skew, na.rm = T), max = max(fs_df_M$skew, na.rm = T))
+
+for(c in combos) {
+skew_heatmaps$c <- ggplot(data = filter(fs_df_M, source == c), aes(x = rank, y = abund, color = skew, group = sim)) +
+  geom_line(alpha = .01) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        panel.spacing = unit(.001, "lines"),
+        strip.text = element_text(size = 12)) +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "free", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8, limits = skewlims) +
+  ggtitle(paste0("Skew heatmaps - ", c))
+names(skew_heatmaps)[ which(names(skew_heatmaps) == "c")] <- c
+}
+
+for(i in 1:length(combos)) {
+  suppressWarnings(print(skew_heatmaps[[i]]))
+}
+
+
 ```
+
+
+The most skewed - by a lot - panel appears to be S = 200, N = 250. Zooming in on that one....
+
+
+```{r S 200 N 250}
+
+s200_n250_heatmap <- ggplot(data = filter(fs_df_M, S == 200, N == 250), aes(x = rank, y = abund, color = skew, group = sim)) +
+  geom_line(alpha = .1) +
+  theme_bw() +
+  scale_color_viridis_c(option = "plasma", end = .8, limits = skewlims) +
+  ggtitle("Skew heatmap - S = 200; N = 250")
+
+s200_n250_heatmap
+
+```
+
+```{r more heatmaps, fig.height = 15, fig.width = 15}
+
+shannon_heatmaps <- list()
+
+shannonlims <- c(min(fs_df_M$shannon, na.rm = T), max = max(fs_df_M$shannon, na.rm = T))
+
+for(c in combos) {
+shannon_heatmaps$c <- ggplot(data = filter(fs_df_M, source == c), aes(x = rank, y = abund, color = shannon, group = sim)) +
+  geom_line(alpha = .01) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        panel.spacing = unit(.001, "lines"),
+        strip.text = element_text(size = 12)) +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "free", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8, limits = shannonlims) +
+  ggtitle(paste0("Shannon heatmaps - ", c))
+names(shannon_heatmaps)[ which(names(shannon_heatmaps) == "c")] <- c
+}
+
+for(i in 1:length(combos)) {
+  suppressWarnings(print(shannon_heatmaps[[i]]))
+}
+
+
+simpson_heatmaps <- list()
+simpsonlims <- c(min(fs_df_M$simpson, na.rm = T), max = max(fs_df_M$simpson, na.rm = T))
+
+for(c in combos) {
+simpson_heatmaps$c <- ggplot(data = filter(fs_df_M, source == c), aes(x = rank, y = abund, color = simpson, group = sim)) +
+  geom_line(alpha = .01) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        panel.spacing = unit(.001, "lines"),
+        strip.text = element_text(size = 12)) +
+  facet_grid(rows = vars(nind), cols = vars(nspp), switch = "both", scales = "free", as.table = F) +
+  scale_color_viridis_c(option = "plasma", end = .8, limits = simpsonlims) +
+  ggtitle(paste0("Simpson heatmaps - ", c))
+names(simpson_heatmaps)[ which(names(simpson_heatmaps) == "c")] <- c
+}
+
+for(i in 1:length(combos)) {
+  suppressWarnings(print(simpson_heatmaps[[i]]))
+}
+
+```
+
+After staring at these.
+
+1. Shannon is irritating because it contains infromation about both richness and diversity; across large gradients in S, it becomes very difficult to understand how changes in the distribution of Shannon values reflects a) changing shapses and b)just the change in S.
+2. Skewness tells you something about how far to the right the J is. If you have a lot of extra individuals to smudge over few species, you can achieve relatively low skewness values vs. when S approaches N, and you can only have a few FS and they all have the J pretty far to the right. This is why the only really high skew values are in the large S plots, as S approaches N. 
+3. Simpson is tracking a combination of how far rigth and how *tall* the J is. More individuals gives you higher Simpson values (generallly), because they create the capacity for really tall J's. But adding species *also* increases the simpson's values, I think because they remove the Js that are tall, yes, but also have more elements where the excess N are smudged over more of the species. For an N, increasing S hollows out the upper left/inner elbow of the J.
+4. The overall takeaways are...
+    1. Shannon's is a mind trip and not super helpful.
+    2. Simpson's and skewness tell us different things; they're neither completely orthogonal nor completely correlated. 
+    3. The underlying statistical constraint's shape is contingent on S and N and their ratio; we expect some S and N to have more or less skewed/even/diverse distributions. There is not an obvious rule-of-thumb to make generalizations about how different combinations of S and N will compare without sampling (or more staring at these plots). However, the feasible set is always dominated by hollow curves.
+    4. Generally, I think it is better practice to compare an empirical SAD to its corresponding FS, and to draw our conclusions from how extreme or pedestrian the observed SAD is compared to its FS - than to try and glean too much about how the constraint envelope shifts with changing S and N. (.... writ large. I think it's still important to dig into how changing the number of cryptic rare species present would change the percentile values. But, importantly, that's not talking about driving S all the way up to equal a fixed N. That's about adding a couple of species with one individual each, increasing S and N simultaneously.). 
+    5. Running up against small-FS-problems is confined to the very smallest communities. 
