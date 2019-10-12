@@ -19,9 +19,11 @@ Imports:
     orthopolynom,
     meteR,
     magrittr,
+    neonUtilities,
     poilog,
     testthat,
     tibble,
-    tidyr
+    tidyr,
+    vegan
 Remotes: 
     diazrenata/feasiblesads

@@ -1,0 +1,139 @@
+table,fieldName,description,dataType,units,parserToCreate,entryValidationRulesParser,entryValidationRulesForm
+apc_perTaxon,aquaticPlantType,"Indicator of the type of aquatic plant in the sample",string,NA,,"[LOV]","[LOV]"
+apc_perTaxon,sampleID,"Identifier for sample",string,NA,,"[DOES_NOT_EXIST][IF(sampleCollected = 'Y'), REQUIRE][ASCII]","[IF(sampleCollected = 'Y'), REQUIRE][SITE & \\.\\ & startDate(YYYYMMDD) & \\.\\ & taxonID OR morphospeciesID & \\.\\ & transectID(##)]"
+apc_perTaxon,collectDate,"Date of the collection event",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]",,"Equals: apc_pointTransect_in.collectDate"
+apc_perTaxon,startDate,"The start date-time or interval during which an event occurred",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)][collectDate]",,"Equals: apc_pointTransect_in.startDate"
+apc_perTaxon,sampleCode,"Barcode of a sample",string,NA,,"[ASCII]","[HIDDEN]"
+apc_perTaxon,morphospeciesID,"Identifier for morphospecies",string,NA,,"[IF(taxonID='2PLANT'),REQUIRE][ASCII]","[IF(taxonID='2PLANT'),REQUIRE][FROM_TABLE]"
+apc_perTaxon,platformInfo,"Operating System and browser information (where applicable) of computer used during data entry",string,NA,,"[ASCII]",
+apc_perTaxon,taxonID,"Species code, based on one or more sources",string,NA,,"[ELEMENT_OF('PLANT', 'taxonID', 'T')]","[IF(IS_NOT_BLANK(apc_pointTransect_in.samplingImpractical)|apc_pointTransect_in.targetTaxaPresent='N'),REQUIRE_NULL][IF(apc_pointTransect_in.targetTaxaPresent='Y'),REQUIRE][ELEMENT_OF('PLANT', 'taxonID', 'T')]"
+apc_perTaxon,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,,"[LOV]","[LOV]"
+apc_perTaxon,sampleClass,"Class of a sample",string,NA,,,"[IF(aquaticPlantType ='plant') DEFAULT_TO ('apc_perTaxon_in.sampleIDplant')][IF (aquaticSiteType = 'macroalgae'), DEFAULT_TO ('apc_perTaxon_in.sampleIDmacroalgae')]"
+apc_perTaxon,pointNumber,"Number of the point sampled for a given location",unsigned integer,number,,"[GREATER_THAN_OR_EQUAL_TO(1)][LESS_THAN_OR_EQUAL_TO(70)][IF (IS_BLANK(samplingImpractical)), REQUIRE]","Equals: apc_pointTransect_in.pointID"
+apc_perTaxon,transectID,"An identifier for the transect",string,NA,,"[NAMED_LOCATION_TYPE('AOS aquatic plant named location type' OR 'AOS reach named location type')]","Equals: apc_pointTransect_in.transectID"
+apc_perTaxon,dataQF,"Data quality flag",string,NA,,"[ASCII]",
+apc_perTaxon,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,,,"[FROM_TABLE]"
+apc_perTaxon,fulcrumVersion,"Version of the Fulcrum application used during data entry",string,NA,,"[ASCII]",
+apc_perTaxon,morphospeciesIDRemarks,"Technician notes about the morphospecies; free text comments accompanying the record",string,NA,,"[ASCII]","[ASCII]"
+apc_perTaxon,growthForm,"The growth form classification",string,NA,,"[LOV]","[IF(IS_NOT_BLANK(apc_pointTransect_in.samplingImpractical)|apc_pointTransect_in.targetTaxaPresent='N'),REQUIRE_NULL][IF(apc_pointTransect_in.targetTaxaPresent='Y'),WARN][LOV]"
+apc_perTaxon,sampleCollected,"Indicator of whether a sample was collected",string,NA,,"[LOV]","[IF(IS_BLANK(apc_pointTransect_in.samplingImpractical)),REQUIRE][IF(IS_NOT_BLANK(apc_pointTransect_in.samplingImpractical)),REQUIRE_NULL][LOV]"
+apc_perTaxon,sampleFate,"Fate of a sample",string,NA,,"[IF(IIS_NOT_BLANK(sampleID)), REQUIRE][IF(IIS_BLANK(sampleID)), REQUIRE_NULL][ASCII]","[IF (sampleClass = apc_perTaxon_in.sampleIDmacroalgae), SUGGESTED_VALUE('active')]"
+apc_perTaxon,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+apc_perTaxon,remarks,"Technician notes; free text comments accompanying the record",string,NA,,"[ASCII]","[ASCII]"
+apc_perTaxon,eventID,"An identifier for the set of information associated with the event, which includes information about the place and time of the event",string,NA,,"[ASCII]","Equals: apc_pointTransect_in.eventID"
+apc_pointTransect,eventID,"An identifier for the set of information associated with the event, which includes information about the place and time of the event",string,NA,,"[ASCII]","[HIDDEN][SITE & \\.\\ & startDate(YYYYMMDD)]"
+apc_pointTransect,collectedBy,"An identifier for the technician who collected the sample or specimen",string,NA,,"[ASCII]","[REQUIRE][FROM_PERSONNEL][SUGGESTED_ENTRY (previousValue)]"
+apc_pointTransect,fulcrumVersion,"Version of the Fulcrum application used during data entry",string,NA,,"[ASCII]",
+apc_pointTransect,transectID,"An identifier for the transect",string,NA,,"[NAMED_LOCATION_TYPE('AOS aquatic plant named location type' OR 'AOS reach named location type')]","[REQUIRE][FROM_AOS_SPATIAL( AOS aquatic plant named location type OR AOS reach named location type)]"
+apc_pointTransect,habitatType,"Habitat type sampled",string,NA,,"[IF(IS_NOT_BLANK(samplingImpractical)),REQUIRE_NULL][LOV]","[IF(IS_BLANK(samplingImpractical)),WARN][IF(IS_NOT_BLANK(samplingImpractical)),REQUIRE_NULL][LOV][SUGGESTED_ENTRY (previousValue)]"
+apc_pointTransect,transectDistance,"Distance along the transect",real,meter,,"[GREATER_THAN_OR_EQUAL_TO(0)][LESS_THAN_OR_EQUAL_TO(70)]","[GREATER_THAN_OR_EQUAL_TO(0)][LESS_THAN_OR_EQUAL_TO(70)]"
+apc_pointTransect,aquaticSiteType,"Type of aquatic site, includes lake, river or stream",string,NA,,"[LOV]","[DEFAULT_TO('stream')]"
+apc_pointTransect,startDate,"The start date-time or interval during which an event occurred",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)][collectDate]",,"[REQUIRE][HIDDEN][DEFAULT_TO (collectDate)]"
+apc_pointTransect,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+apc_pointTransect,platformInfo,"Operating System and browser information (where applicable) of computer used during data entry",string,NA,,"[ASCII]",
+apc_pointTransect,pointNumber,"Number of the point sampled for a given location",unsigned integer,number,,"[GREATER_THAN_OR_EQUAL_TO(1)][LESS_THAN_OR_EQUAL_TO(120)][IF (IS_BLANK(samplingImpractical)), REQUIRE]","[GREATER_THAN_OR_EQUAL_TO(1)][LESS_THAN_OR_EQUAL_TO(120)][IF (IS_BLANK(samplingImpractical)), REQUIRE]"
+apc_pointTransect,samplingProtocolVersion,"The NEON document number and version where detailed information regarding the sampling method used is available; format NEON.DOC.######vX",string,NA,,"[LOV]","[LOV][WARN][SUGGESTED_VALUE(previousValue)]"
+apc_pointTransect,dataQF,"Data quality flag",string,NA,,"[ASCII]",
+apc_pointTransect,collectDate,"Date of the collection event",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]",,"[REQUIRE][DATE_FORMAT(YYYY-MM-DDTHH:MM)][SUGGESTED_ENTRY (previousValue)]"
+apc_pointTransect,substrate,"Organic or inorganic surface material at the location",string,NA,,"[IF(IS_NOT_BLANK(samplingImpractical) | targetTaxaPresent = 'Y'),REQUIRE_NULL][LOV]","[IF(IS_NOT_BLANK(samplingImpractical) | targetTaxaPresent = 'Y'),REQUIRE_NULL][IF(IS_BLANK(samplingImpractical) & targetTaxaPresent = 'N'),WARN][LOV][SUGGESTED_ENTRY (previousValue)]"
+apc_pointTransect,samplingImpractical,"Samples and/or measurements were not collected due to the indicated circumstance",string,NA,,"[LOV]","[LOV]"
+apc_pointTransect,remarks,"Technician notes; free text comments accompanying the record",string,NA,,"[IF(IS_NOT_BLANK(samplingImpractical)),REQUIRE][IF(targetTaxaPresent='U'),REQUIRE][ASCII]","[IF(IS_NOT_BLANK(samplingImpractical)),REQUIRE][IF(targetTaxaPresent='U'),REQUIRE][ASCII]"
+apc_pointTransect,recordedBy,"An identifier for the technician who recorded the data",string,NA,,"[ASCII]","[FROM_PERSONNEL][SUGGESTED_ENTRY (previousValue)]"
+apc_pointTransect,targetTaxaPresent,"Indicator of whether the sample contained individuals of the target taxa",string,NA,,"[IF(IS_BLANK(samplingImpractical)),REQUIRE][IF(IS_NOT_BLANK(samplingImpractical)),REQUIRE_NULL][LOV]","[IF(IS_BLANK(samplingImpractical)),REQUIRE][IF(IS_NOT_BLANK(samplingImpractical)),REQUIRE_NULL][LOV]"
+apc_morphospecies,morphospeciesID,"Identifier for morphospecies",string,NA,,"[ASCII]",
+apc_morphospecies,dataQF,"Data quality flag",string,NA,,"[ASCII]",
+apc_morphospecies,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,,,
+apc_morphospecies,siteID,"NEON site code",string,NA,,"[NAMED_LOCATION_TYPE('SITE')]","[REQUIRE][NAMED_LOCATION_TYPE(SITE)]"
+apc_morphospecies,recordedBy,"An identifier for the technician who recorded the data",string,NA,,"[ASCII]","[FROM_PERSONNEL][SUGGESTED_ENTRY (previousValue)]"
+apc_morphospecies,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+apc_morphospecies,identifiedBy,"An identifier for the technician who identified the specimen",string,NA,,"[ASCII]","[FROM_PERSONNEL][SUGGESTED_ENTRY (previousValue)]"
+apc_morphospecies,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,,"[LOV]","[LOV]"
+apc_morphospecies,morphospeciesResolvedDate,"Date and time of resolving the morphospecies identification",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]",,"[REQUIRE][DATE_FORMAT(YYYY-MM-DDTHH:MM)][SUGGESTED_ENTRY (previousValue)]"
+apc_morphospecies,aquaticSiteType,"Type of aquatic site, includes lake, river or stream",string,NA,,"[LOV]","[FROM_AOS_SITE_TYPE]"
+apc_morphospecies,platformInfo,"Operating System and browser information (where applicable) of computer used during data entry",string,NA,,"[ASCII]",
+apc_morphospecies,fulcrumVersion,"Version of the Fulcrum application used during data entry",string,NA,,"[ASCII]",
+apc_morphospecies,morphospeciesIDRemarks,"Technician notes about the morphospecies; free text comments accompanying the record",string,NA,,"[ASCII]","[ASCII]"
+apc_morphospecies,taxonID,"Species code, based on one or more sources",string,NA,,"[ELEMENT_OF('PLANT', 'taxonID', 'T')]","[ELEMENT_OF('PLANT', 'taxonID', 'T')]"
+apc_morphospecies,morphospeciesCreatedDate,"Date and time of morphospecies record creation",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]",,"[REQUIRE][HIDDEN][DEFAULT_TO (morphospeciesCreatedDate)]"
+apc_morphospecies,morphospeciesResolved,"Indicator of whether the morphospecies has been identified",string,NA,,"[LOV]","[LOV]"
+apc_voucher,taxonID,"Species code, based on one or more sources",string,NA,,"[ELEMENT_OF('PLANT', 'taxonID', 'T')]","[ELEMENT_OF('PLANT', 'taxonID', 'T')]"
+apc_voucher,dataQF,"Data quality flag",string,NA,,"[ASCII]",
+apc_voucher,morphospeciesIDRemarks,"Technician notes about the morphospecies; free text comments accompanying the record",string,NA,,"[ASCII]","[ASCII]"
+apc_voucher,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+apc_voucher,startDate,"The start date-time or interval during which an event occurred",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)][collectDate]",,"[REQUIRE][HIDDEN][DEFAULT_TO (collectDate)]"
+apc_voucher,sampleCode,"Barcode of a sample",string,NA,,"[ASCII]","[HIDDEN]"
+apc_voucher,collectDate,"Date of the collection event",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]",,"[REQUIRE][DATE_FORMAT(YYYY-MM-DDTHH:MM)][SUGGESTED_ENTRY (previousValue)]"
+apc_voucher,recordedBy,"An identifier for the technician who recorded the data",string,NA,,"[ASCII]","[FROM_PERSONNEL][SUGGESTED_ENTRY (previousValue)]"
+apc_voucher,platformInfo,"Operating System and browser information (where applicable) of computer used during data entry",string,NA,,"[ASCII]",
+apc_voucher,aquaticSiteType,"Type of aquatic site, includes lake, river or stream",string,NA,,"[LOV]","[FROM_AOS_SITE_TYPE]"
+apc_voucher,collectedBy,"An identifier for the technician who collected the sample or specimen",string,NA,,"[ASCII]","[REQUIRE][FROM_PERSONNEL][SUGGESTED_ENTRY (previousValue)]"
+apc_voucher,sampleFate,"Fate of a sample",string,NA,,"[REQUIRE][ASCII]","[HIDDEN][DEFAULT_TO('active')]"
+apc_voucher,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,,,
+apc_voucher,siteID,"NEON site code",string,NA,,"[NAMED_LOCATION_TYPE('SITE')]","[REQUIRE][NAMED_LOCATION_TYPE(SITE)]"
+apc_voucher,fulcrumVersion,"Version of the Fulcrum application used during data entry",string,NA,,"[ASCII]",
+apc_voucher,morphospeciesID,"Identifier for morphospecies",string,NA,,"[ASCII]",
+apc_voucher,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,,"[LOV]","[LOV]"
+apc_voucher,sampleID,"Identifier for sample",string,NA,,"[DOES_NOT_EXIST][REQUIRE][ASCII]","[REQUIRE]"
+ptx_taxonomy,speciesGroup,"The unofficial species group into which the taxon is categorized",string,NA,,"[ASCII]",
+ptx_taxonomy,subvariety,"The subvariety (infraspecific name below the rank of variety) of the scientific name applied to the taxon",string,NA,,"[ASCII]",
+ptx_taxonomy,subclass,"The scientific name of the subclass in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,class,"The scientific name of the class in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,sampleFate,"Fate of a sample",string,NA,"[DEFAULT_TO('active')]","[ASCII]",
+ptx_taxonomy,variety,"The variety (infraspecific name below the rank of infraspecific epithet) of the scientific name applied to the taxon",string,NA,,"[ASCII]",
+ptx_taxonomy,sampleID,"Identifier for sample",string,NA,,"[REQUIRE][EXISTS][ASCII]",
+ptx_taxonomy,tribe,"The scientific name of the tribe in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,specificEpithet,"The specific epithet (second part of the species name) of the scientific name applied to the taxon",string,NA,,"[ASCII]",
+ptx_taxonomy,slideID,"Unique identifier associated with each slide per sampleID or subsampleID",string,NA,,"[MIGHT_EXIST][ASCII]",
+ptx_taxonomy,family,"The scientific name of the family in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,suborder,"The scientific name of the suborder in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,parvdivision,"The scientific name of the parvdivision in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,subsection,"The scientific name of the subsection in which the organism is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,superclass,"The scientific name of the superclass in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,subdivision,"The scientific name of the subdivision in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,algalParameter,"Parameter used for analysis of algal assemblages",string,NA,,"[REQUIRE][LOV]",
+ptx_taxonomy,stationID,"Identifier for station where sample was collected",string,NA,"[DERIVE_FROM_SAMPLE_TREE('apl_clipHarvest_in.fieldID' OR 'apc_perTaxon_in.sampleIDplant' OR 'apc_perTaxon_in.sampleIDmacroalgae' OR 'apc_voucher_in.sampleID' OR 'alg_fieldData_in.parentSampleID' OR 'audit_sample')]","[NAMED_LOCATION_TYPE('AOS aquatic plant named location type' OR 'AOS reach named location type' OR 'AOS S2 named location type' OR 'AOS outlet named location type' OR 'AOS inlet named location type' OR 'AOS buoy named location type' OR 'AOS riparian named location type' OR 'External Lab' OR 'SITE')]",
+ptx_taxonomy,perBottleSampleVolume,"Sample volume per bottle in milliliters",real,milliliter,,,
+ptx_taxonomy,algalType,"Informal taxonomic grouping of algal species",string,NA,,"[LOV]",
+ptx_taxonomy,scientificName,"Scientific name, associated with the taxonID. This is the name of the lowest level taxonomic rank that can be determined",string,NA,,"[IF(sampleCondition!='not analyzed'), REQUIRE][IF(algalParameter='plant' & sampleCondition!='not analyzed'), ELEMENT_OF('PLANT' , 'scientificName', 'F')][IF(algalParameter!='plant' & sampleCondition!='not analyzed'), ELEMENT_OF('ALGAE', 'scientificName', 'F')]",
+ptx_taxonomy,subtribe,"The scientific name of the subtribe in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,startDate,"The start date-time or interval during which an event occurred",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('apl_clipHarvest_in.fieldID' OR 'apc_perTaxon_in.sampleIDplant' OR 'apc_perTaxon_in.sampleIDmacroalgae' OR 'apc_voucher_in.sampleID' OR 'alg_fieldData_in.parentSampleID' OR 'audit_sample')]",,
+ptx_taxonomy,subspecies,"The subspecies (infraspecific name below the rank of infraspecific epithet) of the scientific name applied to the taxon",string,NA,,"[ASCII]",
+ptx_taxonomy,kingdom,"The scientific name of the kingdom in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,algalParameterValue,"Value of the algalParameter",real,NA,,,
+ptx_taxonomy,qcTaxonomyStatus,"Sample chosen as part of 10% of samples for quality control (QC)",string,NA,,"[LOV]",
+ptx_taxonomy,slideFate,"Fate of a slide",string,NA,"[DEFAULT_TO('active')]","[ASCII]",
+ptx_taxonomy,remarks,"Technician notes; free text comments accompanying the record",string,NA,,"[IF(sampleCondition='not analyzed'), REQUIRE][ASCII]",
+ptx_taxonomy,section,"The scientific name of the section in which the organism is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,sampleCondition,"Condition of a sample",string,NA,,"[REQUIRE][LOV]",
+ptx_taxonomy,taxonDatabaseName,"Name of the taxonomic database",string,NA,,"[ASCII]",
+ptx_taxonomy,sampleCode,"Barcode of a sample",string,NA,,"[ASCII]",
+ptx_taxonomy,dataQF,"Data quality flag",string,NA,,"[ASCII]",
+ptx_taxonomy,identifiedBy,"An identifier for the technician who identified the specimen",string,NA,,"[ASCII]",
+ptx_taxonomy,identifiedDate,"Date on which the sample, individual, or specimen was identified",dateTime,NA,"[CONVERT_TO_UTC (laboratoryName)]","[LESS_THAN_OR_EQUAL_TO (NOW + 24hr)]",
+ptx_taxonomy,subgenus,"The scientific name of the subgenus in which the taxon is classified. Values should include the genus to avoid homonym confusion",string,NA,,"[ASCII]",
+ptx_taxonomy,targetTaxaPresent,"Indicator of whether the sample contained individuals of the target taxa",string,NA,"[IF(IS_NOT_BLANK(scientificName)), DEFAULT_TO('Y')]","[IF(IS_BLANK(scientificName)), REQUIRE][LOV]",
+ptx_taxonomy,infrakingdom,"The scientific name of the infrakingdom in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,collectDate,"Date of the collection event",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('apl_clipHarvest_in.fieldID' OR 'apc_perTaxon_in.sampleIDplant' OR 'apc_perTaxon_in.sampleIDmacroalgae' OR 'apc_voucher_in.sampleID' OR 'alg_fieldData_in.parentSampleID' OR 'audit_sample')]",,
+ptx_taxonomy,subfamily,"The scientific name of the subfamily in which the organism is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,algalParameterUnit,"Unit of measure associated with the algalParameter",string,NA,,"[LOV]",
+ptx_taxonomy,internalLabID,"Internal identifier used by the external facility",string,NA,,"[ASCII]",
+ptx_taxonomy,method,"Published method used for analysis",string,NA,,"[ASCII]",
+ptx_taxonomy,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+ptx_taxonomy,subform,"The subform (infraspecific name below the rank of form) of the scientific name applied to the taxon",string,NA,,"[ASCII]",
+ptx_taxonomy,division,"The scientific name of the division in which the taxon is classified",string,NA,,"[IF(targetTaxaPresent='Y' & sampleCondition!='not analyzed'), REQUIRE][ASCII]",
+ptx_taxonomy,superorder,"The scientific name of the superorder in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,scientificNameAuthorship,"Name of the individual(s) who designated the scientific name of the taxon",string,NA,,,
+ptx_taxonomy,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,,,
+ptx_taxonomy,laboratoryName,"Name of the laboratory or facility that is processing the sample",string,NA,"[DEFAULT_TO_LAB_LOGGED_IN]","[NAMED_LOCATION_TYPE('External Lab')]",
+ptx_taxonomy,taxonDatabaseID,"Unique identifier for the taxon within the database",string,NA,,"[ASCII]",
+ptx_taxonomy,superdivision,"The scientific name of the superdivision in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,genus,"The scientific name of the genus in which the organism is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,morphospeciesID,"Identifier for morphospecies",string,NA,,"[ASCII][IF(scientificName='Unknown Algae'), REQUIRE]",
+ptx_taxonomy,form,"The form (infraspecific name below the rank of infraspecific epithet) of the scientific name applied to the taxon",string,NA,,"[ASCII]",
+ptx_taxonomy,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,,"[LOV]",
+ptx_taxonomy,slideCode,"Barcode of a slide",string,NA,,"[ASCII]",
+ptx_taxonomy,subkingdom,"The scientific name of the subkingdom in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,infraclass,"The scientific name of the infraclass in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,order,"The scientific name of the order in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,infradivision,"The scientific name of the infradivision in which the taxon is classified",string,NA,,"[ASCII]",
+ptx_taxonomy,testMethod,"Method used to conduct test",string,NA,,"[REQUIRE][LOV]",

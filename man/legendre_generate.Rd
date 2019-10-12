@@ -4,7 +4,7 @@
 \alias{legendre_generate}
 \title{Generate a (scaled) SAD from Legendre coefficients}
 \usage{
-legendre_generate(coeff_values, nleg, nspp)
+legendre_generate(coeff_values, nleg, nspp, scale_pos = 2400)
 }
 \arguments{
 \item{coeff_values}{coeffcicient values}
