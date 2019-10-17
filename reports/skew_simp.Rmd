@@ -1,0 +1,110 @@
+---
+title: "Exploring S and N space - skewness v simpsons"
+output: github_document
+date: 10/17/2019
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(drake)
+library(dplyr)
+library(ggplot2)
+library(scads)
+full <- FALSE
+```
+
+## Combinations of S & N
+
+These are the combinations of S and N I ran sampling on. There are three chunks: small, large S, and large N. Small is to get at behavior for very small S and N. Large S and large N explore larger communities in those directions. The bottom right corner is gently constrained because N must be >= to S. I tried to explore the general regions of space filled by the datasets in the Baldridge/White papers. I've done this edges-approach because is computationally expensive to explore the large S-large N corner, and there aren't datasets there. 
+
+```{r S and N combos}
+
+small_s <- c(2:10)
+small_n <-  c(2:19, seq(20, 200, by = 10))
+
+small_combinations <- expand.grid(S = small_s, N = small_n) %>%
+  dplyr::filter(N > S) %>%
+  filter(N %in% seq(4, 200, by = 4)) %>%
+  filter(N %in% c(0:40, 100, 140, 160, 200))
+
+
+large_s <- c(10, 20, 30, seq(50, 250, by = 50))
+moderate_n <- seq(50, 250, by = 50)
+
+ls_mn_combinations <- expand.grid(S = large_s, N = moderate_n) %>%
+  dplyr::filter(N > S)
+
+moderate_s <- c(seq(5, 40, by = 5), 50, 75)
+large_n <- c(seq(500, 2500, by = 500), 5000, 7500)
+
+ms_ln_combinations <- expand.grid(S = moderate_s, N = large_n) %>%
+  dplyr::filter(N > S)
+
+all_combinations <- dplyr::bind_rows(small = small_combinations, large_s = ls_mn_combinations, large_n= ms_ln_combinations, .id = "source") %>%
+  mutate(source = as.factor(source))
+
+combinations_plot <- ggplot(data = all_combinations, aes(x = S, y = N, color = source)) +
+  geom_point() +
+  theme_bw() +
+  scale_color_viridis_d(end = .8)
+
+combinations_plot
+
+combinations_plots_zoomed <- combinations_plot +
+  facet_wrap(~source, strip.position = "top", scales = "free")
+combinations_plots_zoomed
+```
+
+## Heatmaps
+
+These are a prototypical way to see if the weirdos in terms of skewness map on to weirdos in terms of simpson's. We know the ranks/percentiles aren't 1:1, but do they point in similar directions? 
+
+This code needs to be generalized.
+
+```{r prep heatmap data, fig.width = 10, fig.height = 5}
+
+if(full) {
+fs_df <- read.csv(here::here("drake", "fs_df.csv"), stringsAsFactors = F)
+} else {
+  fs_df <- read.csv(here::here("drake", "fs_df_first1000.csv"), stringsAsFactors = F)
+}
+
+if(full) {
+di_df <- read.csv(here::here("drake", "di_df.csv"), stringsAsFactors = F)
+} else {
+  di_df <- read.csv(here::here("drake", "di_df_first1000.csv"), stringsAsFactors = F)
+
+}
+
+fs_df_M <- fs_df %>%
+  select(-source) %>%
+  filter(!(grepl(sn_combination, pattern = "table_2"))) %>%
+  mutate(sn_combination = paste0("di_", sn_combination)) %>%
+  left_join(di_df, by = c("S", "N", "sim", "sn_combination")) %>%
+  select(-sn_combination, -source) %>%
+  left_join(all_combinations, by = c("S", "N")) %>%
+  mutate(nind = as.factor(N),
+         nspp = as.factor(S)) %>%
+  filter(!is.na(source))
+
+s200_n250_heatmap_skew <- ggplot(data = filter(fs_df_M, S == 15, N == 2000), aes(x = rank, y = abund, color = skew, group = sim)) +
+  geom_line(alpha = .01) +
+    geom_line(data = filter(fs_df_M, S == 15, N == 2000, skew > quantile(filter(fs_df_M, S == 15, N == 2000)$skew, na.rm = T, probs = .99)[[1]]), alpha = .5) +
+  theme_bw() +
+  scale_color_viridis_c(option = "plasma", end = .8, direction = -1) +
+  ggtitle("Skew heatmap - S == 15, N == 2000")
+
+s200_n250_heatmap_simpson <- ggplot(data = filter(fs_df_M, S == 15, N == 2000), aes(x = rank, y = abund, color = simpson, group = sim)) +
+  geom_line(alpha = .01) +
+   geom_line(data = filter(fs_df_M,  S == 15, N == 2000, simpson < quantile(filter(fs_df_M, S == 15, N == 2000)$simpson, na.rm = T, probs = .01)[[1]]), alpha = .5) +
+  theme_bw() +
+  scale_color_viridis_c(end = .8) +
+  ggtitle("Simpson heatmap - S == 15, N == 2000")
+
+
+gridExtra::grid.arrange(grobs = list(s200_n250_heatmap_skew, s200_n250_heatmap_simpson), nrow = 1)
+
+
+
+```
+
