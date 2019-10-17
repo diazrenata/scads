@@ -19,6 +19,10 @@ download_neon_data <- function(taxonType){
     dataProductID <- "DP1.20072.001"
   }
   
+  if(taxonType == "ground_beetles") {
+    dataProductID <- "DP1.10022.001"
+  }
+  
   neonUtilities::zipsByProduct(dpID = dataProductID, site = "all",
                                savepath = save_filepath)
   

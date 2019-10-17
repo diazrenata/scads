@@ -8,7 +8,7 @@ library(dplyr)
 library(scads)
 ```
 
-### Aquatic plants
+## Aquatic plants
 
 ```{r aquatic plants}
 
@@ -48,5 +48,31 @@ rm(pointTrans)
 rm(perTaxon)
 rm(goodSamples) 
 rm(perTaxonPropSpecies)
+
+```
+
+
+## Ground beetles
+```{r download and stack ground beetles, eval = F}
+
+download_neon_data("ground_beetles")
+
+```
+
+bet_sorting.csv is the raw-est beetles data. There is a complicated process for getting additional species identifications. Before I go too deep into that, I'm wondering what the diversity & abundance more-or-less look like here. 
+
+```{r load and look at ground beetles}
+gb_path <- here::here("reports", "datasets", "neon", "ground_beetles")
+gb_path <- file.path(gb_path, list.dirs(gb_path, full.names = FALSE, recursive = F)[ which(nchar(list.dirs(gb_path, full.names = FALSE, recursive = F)) > 2)]) 
+
+vars <- read.csv(file.path(gb_path, "stackedFiles", "variables.csv"), stringsAsFactors = F)
+bet_sort <- read.csv(file.path(gb_path, "stackedFiles", "bet_sorting.csv"), stringsAsFactors = F)
+
+bet_sort_statevars <- bet_sort %>%
+  filter(sampleType == "carabid") %>%
+  group_by(plotID) %>%
+  summarize(nspp = length(unique(taxonID)),
+            nind = sum(individualCount)) %>%
+  ungroup()
 
 ```

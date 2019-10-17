@@ -1,0 +1,133 @@
+table,fieldName,description,dataType,units,parserToCreate,entryValidationRulesParser,entryValidationRulesForm
+bet_sorting,dataQF,"Data quality flag",string,NA,,"[ASCII]",
+bet_sorting,trapID,"Identifier for trap",string,NA,,"[LOV]",
+bet_sorting,subsampleID,"Unique identifier associated with each subsample per sampleID",string,NA,,"[REQUIRE][DOES_NOT_EXIST][STARTS_WITH(sampleID)]","[REQUIRE][STARTS_WITH(sampleID)]"
+bet_sorting,sampleFate,"Fate of a sample",string,NA,"[DEFAULT_TO('processed')]","[LOV]","[SUGGESTED_ENTRY('processed')]"
+bet_sorting,identifiedDate,"Date on which the sample, individual, or specimen was identified",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]","[IF (sampleType = 'invert bycatch'), REQUIRE_NULL][IF (sampleType != 'invert bycatch'), [GREATER_THAN_OR_EQUAL_TO(collectDate)]]","[DATE_FORMAT(YYYY-MM-DD)][GREATER_THAN(collectDate)][IF (sampleType = 'invert bycatch'), REQUIRE NULL]"
+bet_sorting,individualCount,"Number of individuals of the same type",unsigned integer,number,,"[IF (sampleType = 'invert bycatch'), REQUIRE_NULL][IF (sampleType != 'invert bycatch'), [GREATER_THAN(0)]]","[IF (sampleType = 'invert bycatch'), REQUIRE NULL][GREATER_THAN(0)]"
+bet_sorting,etOHChangeDate,"Date the ethanol rinse was completed",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]","[GREATER_THAN_OR_EQUAL_TO(collectDate)]","[REQUIRE][GREATER_THAN_OR_EQUAL_TO(collectDate)][DATE_FORMAT(YYYY-MM-DD)]"
+bet_sorting,sampleClass,"Class of a sample",string,NA,,"[ASCII]",
+bet_sorting,subsampleCode,"Barcode of a subsample",string,NA,,"[ASCII]",
+bet_sorting,identifiedBy,"An identifier for the technician who identified the specimen",string,NA,,"[ASCII]","[FROM_PERSONNEL]"
+bet_sorting,sampleCode,"Barcode of a sample",string,NA,,,
+bet_sorting,targetTaxaPresent,"Indicator of whether the sample contained individuals of the target taxa",string,NA,,"[LOV]","[HIDDEN]"
+bet_sorting,morphospeciesID,"Identifier for morphospecies",string,NA,,"[IF IS_NOT_BLANK, MATCH_REGULAR_EXPRESSION('^D[0-9]{2}.20[0-9]{2}.Morph[A-Z]+$')][IF (sampleType = 'invert bycatch'), REQUIRE_NULL]","[MATCH_REGULAR_EXPRESSION('^D[0-9]{2}.20[0-9]{2}.Morph[A-Z]+$')][IF (sampleType = 'invert bycatch'), REQUIRE_NULL]"
+bet_sorting,enteredBy,"An identifier for the technician who entered the data",string,NA,,"[ASCII]","[HIDDEN]"
+bet_sorting,plotID,"Plot identifier (NEON site code_XXX)",string,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]","[NAMED_LOCATION_TYPE('OS Plot - bet')]","[NAMED_LOCATION_TYPE('OS Plot - bet')]"
+bet_sorting,platformInfo,"Operating System and browser information (where applicable) of computer used during data entry",string,NA,,"[ASCII]",
+bet_sorting,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+bet_sorting,sampleID,"Identifier for sample",string,NA,,"[REQUIRE][MATCH_REGULAR_EXPRESSION('^[A-Z]{4}_[0-9]{3}.[WNES].[0-9]{8}$')][EXISTS]","[REQUIRE][MATCH_REGULAR_EXPRESSION('^[A-Z]{4}_[0-9]{3}.[WNES].[0-9]{8}$')]"
+bet_sorting,setDate,"Date that trap was set",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]",,
+bet_sorting,recordedBy,"An identifier for the technician who recorded the data",string,NA,,"[ASCII]","[REQUIRE][FROM_PERSONNEL]"
+bet_sorting,collectDate,"Date of the collection event",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]",,
+bet_sorting,sampleType,"Type of sample",string,NA,,"[LOV]","[REQUIRE][LOV]"
+bet_sorting,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,,"[LOV]","[LOV]"
+bet_sorting,fulcrumVersion,"Version of the Fulcrum application used during data entry",string,NA,,"[ASCII]",
+bet_sorting,remarks,"Technician notes; free text comments accompanying the record",string,NA,,"[ASCII]","[ASCII]"
+bet_sorting,taxonID,"Species code, based on one or more sources",string,NA,,"[IF (sampleType != 'invert bycatch'), REQUIRE][IF (sampleType = 'invert bycatch'), REQUIRE_NULL][IF (sampleType = 'carabid'), ELEMENT_OF('BEETLE', 'taxonID', 'F')][IF (sampleType = 'vert bycatch mam'), ELEMENT_OF('SMALL_MAMMAL', 'taxonID', 'F')][IF (sampleType = 'vert bycatch herp'), ELEMENT_OF('HERPETOLOGY', 'taxonID', 'F')]","[IF (sampleType != 'invert bycatch'), REQUIRE][IF (sampleType = 'invert bycatch'), REQUIRE_NULL][IF (sampleType = 'carabid'), ELEMENT_OF('BEETLE', 'taxonID', 'T')][IF (sampleType = 'vert bycatch mam'), ELEMENT_OF('SMALL_MAMMAL', 'taxonID', 'T')][IF (sampleType = 'vert bycatch herp'), ELEMENT_OF('HERPETOLOGY', 'taxonID', 'T')]"
+bet_sorting,processingDate,"Date that sample was processed (i.e., sorted or pinned) in the domain lab",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]","[GREATER_THAN_OR_EQUAL_TO(collectDate)]","[REQUIRE][GREATER_THAN_OR_EQUAL_TO(collectDate)][DATE_FORMAT(YYYY-MM-DD)]"
+bet_sorting,subsampleFate,"Fate of a subsample",string,NA,"[DEFAULT_TO('active')]","[LOV]","[SUGGESTED_ENTRY('active')]"
+bet_sorting,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,,"[LOV]","[IF (sampleType != 'invert bycatch'), REQUIRE][LOV]"
+bet_expertTaxonomistID,phylum,"The scientific name of the phylum or division in which the taxon is classified",string,NA,"[IF (targetTaxaPresent = 'Y'),DEFAULT_TO('Arthropoda')]","[ASCII]",
+bet_expertTaxonomistID,individualFate,"Fate of a tagged individual",string,NA,"[DEFAULT_TO('active')]","[LOV]",
+bet_expertTaxonomistID,identificationRemarks,"Comments or notes about the identification",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,subfamily,"The scientific name of the subfamily in which the organism is classified",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,identifiedBy,"An identifier for the technician who identified the specimen",string,NA,,"[REQUIRE][LOV]",
+bet_expertTaxonomistID,scientificName,"Scientific name, associated with the taxonID. This is the name of the lowest level taxonomic rank that can be determined",string,NA,,"[REQUIRE][ELEMENT_OF('BEETLE', 'scientificName', 'F')]",
+bet_expertTaxonomistID,identifiedDate,"Date on which the sample, individual, or specimen was identified",dateTime,NA,"[CONVERT_TO_UTC(laboratoryName)]","[GREATER_THAN_OR_EQUAL_TO(collectDate)]",
+bet_expertTaxonomistID,tribe,"The scientific name of the tribe in which the taxon is classified",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,remarks,"Technician notes; free text comments accompanying the record",string,NA,,"[IF (sampleCondition = 'Other (described in remarks)'), REQUIRE][ASCII]",
+bet_expertTaxonomistID,setDate,"Date that trap was set",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]",,
+bet_expertTaxonomistID,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,,"[LOV]",
+bet_expertTaxonomistID,genus,"The scientific name of the genus in which the organism is classified",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,collectDate,"Date of the collection event",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]",,
+bet_expertTaxonomistID,order,"The scientific name of the order in which the taxon is classified",string,NA,"[IF (targetTaxaPresent = 'Y'),DEFAULT_TO('Coleoptera')]","[ASCII]",
+bet_expertTaxonomistID,sampleCondition,"Condition of a sample",string,NA,,"[LOV]",
+bet_expertTaxonomistID,morphospeciesID,"Identifier for morphospecies",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,sex,"M for male, F for female, U for unknown",string,NA,,"[REQUIRE][LOV]",
+bet_expertTaxonomistID,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,,"[LOV]",
+bet_expertTaxonomistID,infraspecificEpithet,"The infraspecific epithet (scientific name below the rank of species) of the scientific name applied to the taxon",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,plotID,"Plot identifier (NEON site code_XXX)",string,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]","[NAMED_LOCATION_TYPE('OS Plot - bet')]",
+bet_expertTaxonomistID,individualCode,"Barcode of an individual",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,individualID,"Domain-level unique identifier for an individual: NEON.MOD.D##.######",string,NA,,"[REQUIRE][EXISTS]",
+bet_expertTaxonomistID,laboratoryName,"Name of the laboratory or facility that is processing the sample",string,NA,"[DEFAULT_TO_LAB_LOGGED_IN]","[REQUIRE][NAMED_LOCATION_TYPE('External Lab')]",
+bet_expertTaxonomistID,targetTaxaPresent,"Indicator of whether the sample contained individuals of the target taxa",string,NA,,"[LOV]",
+bet_expertTaxonomistID,kingdom,"The scientific name of the kingdom in which the taxon is classified",string,NA,"[IF (targetTaxaPresent = 'Y'),DEFAULT_TO('Animalia')]","[ASCII]",
+bet_expertTaxonomistID,class,"The scientific name of the class in which the taxon is classified",string,NA,"[IF (targetTaxaPresent = 'Y'),DEFAULT_TO('Insecta')]","[ASCII]",
+bet_expertTaxonomistID,scientificNameAuthorship,"Name of the individual(s) who designated the scientific name of the taxon",string,NA,,,
+bet_expertTaxonomistID,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+bet_expertTaxonomistID,dataQF,"Data quality flag",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,subgenus,"The scientific name of the subgenus in which the taxon is classified. Values should include the genus to avoid homonym confusion",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,specificEpithet,"The specific epithet (second part of the species name) of the scientific name applied to the taxon",string,NA,,"[ASCII]",
+bet_expertTaxonomistID,batchID,"Identifier for batch or analytical run",string,NA,,,
+bet_expertTaxonomistID,family,"The scientific name of the family in which the taxon is classified",string,NA,"[IF (targetTaxaPresent = 'Y'),DEFAULT_TO('Carabidae')]","[ASCII]",
+bet_IDandpinning,collectDate,"Date of the collection event",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]",,
+bet_IDandpinning,morphospeciesID,"Identifier for morphospecies",string,NA,,"[IF IS_NOT_BLANK, MATCH_REGULAR_EXPRESSION('^D[0-9]{2}.20[0-9]{2}.Morph[A-Z]+$')]","[MATCH_REGULAR_EXPRESSION('^D[0-9]{2}.20[0-9]{2}.Morph[A-Z]+$')]"
+bet_IDandpinning,setDate,"Date that trap was set",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]",,
+bet_IDandpinning,trapID,"Identifier for trap",string,NA,,"[LOV]",
+bet_IDandpinning,individualCode,"Barcode of an individual",string,NA,,"[ASCII]",
+bet_IDandpinning,photoView,"Standardized term to group images depicting a specific set of features of the organisms or related environment",string,NA,,"[ASCII]","[LOV]"
+bet_IDandpinning,plotID,"Plot identifier (NEON site code_XXX)",string,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]","[NAMED_LOCATION_TYPE('OS Plot - bet')]",
+bet_IDandpinning,subsampleFate,"Fate of a subsample",string,NA,"[DEFAULT_TO('processed')]","[LOV]",
+bet_IDandpinning,identifiedDate,"Date on which the sample, individual, or specimen was identified",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]","[IF IS_NOT_BLANK, [GREATER_THAN(collectDate)]]","[DATE_FORMAT(YYYY-MM-DD)][REQUIRE][GREATER_THAN(collectDate)]"
+bet_IDandpinning,platformInfo,"Operating System and browser information (where applicable) of computer used during data entry",string,NA,,"[ASCII]",
+bet_IDandpinning,enteredBy,"An identifier for the technician who entered the data",string,NA,,"[ASCII]","[HIDDEN]"
+bet_IDandpinning,dataQF,"Data quality flag",string,NA,,"[ASCII]",
+bet_IDandpinning,individualID,"Domain-level unique identifier for an individual: NEON.MOD.D##.######",string,NA,,"[REQUIRE][DOES_NOT_EXIST][MATCH_REGULAR_EXPRESSION('^NEON.BET.D[0-9]{2}.[0-9]{6}$')]","[REQUIRE][MATCH_REGULAR_EXPRESSION('^NEON.BET.D[0-9]{2}.[0-9]{6}$')]"
+bet_IDandpinning,photographedBy,"An identifier for the technician who took the photograph",string,NA,,"[ASCII]",
+bet_IDandpinning,dnaBarcoded,"An indicator of whether the sample was selected as a candidate for genetic barcoding",string,NA,,"[LOV]","[REQUIRE][LOV]"
+bet_IDandpinning,identificationReferences,"A list of sources (concatenated and semicolon separated) used to derive the specific taxon concept; including field guide editions, books, or versions of NEON keys used",string,NA,,"[LOV]","[REQUIRE][LOV]"
+bet_IDandpinning,taxonID,"Species code, based on one or more sources",string,NA,,"[ELEMENT_OF('BEETLE', 'taxonID', 'F')][REQUIRE]","[ELEMENT_OF('BEETLE', 'taxonID', 'T')][REQUIRE]"
+bet_IDandpinning,processingDate,"Date that sample was processed (i.e., sorted or pinned) in the domain lab",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]","[IF IS_NOT_BLANK, [GREATER_THAN(collectDate)]]","[DATE_FORMAT(YYYY-MM-DD)][REQUIRE][GREATER_THAN(collectDate)]"
+bet_IDandpinning,recordedBy,"An identifier for the technician who recorded the data",string,NA,,"[ASCII]","[REQUIRE][FROM_PERSONNEL]"
+bet_IDandpinning,remarks,"Technician notes; free text comments accompanying the record",string,NA,,"[ASCII]","[ASCII]"
+bet_IDandpinning,identificationQualifier,"A standard term to express the determiner's doubts about the Identification",string,NA,,"[LOV]","[LOV]"
+bet_IDandpinning,fulcrumVersion,"Version of the Fulcrum application used during data entry",string,NA,,"[ASCII]",
+bet_IDandpinning,subsampleCode,"Barcode of a subsample",string,NA,,"[ASCII]",
+bet_IDandpinning,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+bet_IDandpinning,referencePhotoID,"Unique identifier for the photo associated with the reference collection",string,NA,,"[ASCII]",
+bet_IDandpinning,totalLength,"total length (head + body); in millimeters",unsigned integer,millimeter,,"[IF IS_NOT_BLANK, [GREATER_THAN(0)]]","[GREATER_THAN(0)]"
+bet_IDandpinning,subsampleID,"Unique identifier associated with each subsample per sampleID",string,NA,,"[REQUIRE][EXISTS]","[REQUIRE]"
+bet_IDandpinning,identifiedBy,"An identifier for the technician who identified the specimen",string,NA,,"[ASCII]","[REQUIRE][FROM_PERSONNEL]"
+bet_IDandpinning,individualFate,"Fate of a tagged individual",string,NA,"[DEFAULT_TO('active')]","[LOV]","[SUGGESTED_ENTRY('active')]"
+bet_fielddata,plotID,"Plot identifier (NEON site code_XXX)",string,NA,,"[NAMED_LOCATION_TYPE('OS Plot - bet')]","[REQUIRE][NAMED_LOCATION_TYPE('OS Plot - bet')]"
+bet_fielddata,lidStatus,"Indicator of whether the lid of the trap was disturbed or missing during the sampling bout",string,NA,,"[LOV]","[LOV][WARN]"
+bet_fielddata,sampleCollected,"Indicator of whether a sample was collected",string,NA,,"[LOV]","[REQUIRE][LOV]"
+bet_fielddata,setDate,"Date that trap was set",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]",,"[REQUIRE][DATE_FORMAT(YYYY-MM-DD)]"
+bet_fielddata,fulcrumVersion,"Version of the Fulcrum application used during data entry",string,NA,,"[ASCII]",
+bet_fielddata,fluidLevel,"Fluid level in the trap when it was collected; High (above line); Low (below line) or Ok",string,NA,,"[LOV]","[LOV][WARN]"
+bet_fielddata,eventID,"An identifier for the set of information associated with the event, which includes information about the place and time of the event",string,NA,,"[ASCII]",
+bet_fielddata,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+bet_fielddata,daysOfTrapping,"number of days between trap setting and collecting events",unsigned integer,nominalDay,,,
+bet_fielddata,dataQF,"Data quality flag",string,NA,,,
+bet_fielddata,sampleCode,"Barcode of a sample",string,NA,,"[ASCII]","[HIDDEN]"
+bet_fielddata,collectDate,"Date of the collection event",dateTime,NA,"[CONVERT_TO_UTC(namedLocation)]","[GREATER_THAN_OR_EQUAL_TO(setDate + 24hr)]DATE","[REQUIRE][GREATER_THAN_OR_EQUAL_TO(setDate)][DATE_FORMAT(YYYY-MM-DD)]"
+bet_fielddata,sampleFate,"Fate of a sample",string,NA,"[IF (sampleCollected = 'Y'), DEFAULT_TO('active')][IF (sampleCollected = 'N'), REQUIRE_NULL]","[LOV]","[REQUIRE][SUGGESTED_ENTRY('active')]"
+bet_fielddata,sampleID,"Identifier for sample",string,NA,,"[DOES_NOT_EXIST][IF (sampleCollected = 'Y'), REQUIRE][IF IS_NOT_BLANK, MATCH_REGULAR_EXPRESSION('^[A-Z]{4}_[0-9]{3}.[WNES].[0-9]{8}$')]","[IF (sampleCollected = 'Y'), REQUIRE]"
+bet_fielddata,trapID,"Identifier for trap",string,NA,,"[LOV]","[REQUIRE][LOV]"
+bet_fielddata,enteredBy,"An identifier for the technician who entered the data",string,NA,,"[ASCII]","[HIDDEN]"
+bet_fielddata,recordedBy,"An identifier for the technician who recorded the data",string,NA,,"[ASCII]","[REQUIRE][FROM_PERSONNEL]"
+bet_fielddata,trappingDays,"Decimal days between trap setting and collecting events",real,nominalDay,"[collectDate - setDate][DAYS]","[LESS_THAN(365)]",
+bet_fielddata,remarks,"Technician notes; free text comments accompanying the record",string,NA,,"[ASCII]","[ASCII]"
+bet_fielddata,platformInfo,"Operating System and browser information (where applicable) of computer used during data entry",string,NA,,"[ASCII]",
+bet_fielddata,samplingProtocolVersion,"The NEON document number and version where detailed information regarding the sampling method used is available; format NEON.DOC.######vX",string,NA,,"[LOV]","[REQUIRE][LOV]"
+bet_fielddata,cupStatus,"Indicator of whether the cup of the trap was disturbed or missing during the sampling bout",string,NA,,"[LOV]","[LOV][WARN]"
+bet_archivepooling,sampleClass,"Class of a sample",string,NA,,"[ASCII]",
+bet_archivepooling,collectDate,"Date of the collection event",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]",,
+bet_archivepooling,fulcrumVersion,"Version of the Fulcrum application used during data entry",string,NA,,"[ASCII]",
+bet_archivepooling,processingDate,"Date that sample was processed (i.e., sorted or pinned) in the domain lab",dateTime,NA,,,"[DATE_FORMAT(YYYY-MM-DD)]"
+bet_archivepooling,archiveSampleFate,"Fate of archived sample",string,NA,"[DEFAULT_TO('active')]","[LOV]","[SUGGESTED_ENTRY('active')]"
+bet_archivepooling,dataQF,"Data quality flag",string,NA,,"[ASCII]",
+bet_archivepooling,archiveSampleCode,"Barcode of archive sample",string,NA,,"[ASCII]",
+bet_archivepooling,remarks,"Technician notes; free text comments accompanying the record",string,NA,,"[ASCII]","[ASCII]"
+bet_archivepooling,archiveVialID,"Identifier for the vial containing specimens for archive",string,NA,,"[REQUIRE][DOES_NOT_EXIST]","[REQUIRE]"
+bet_archivepooling,subsampleCode,"Barcode of a subsample",string,NA,"[SPLIT_BY('|')]","[ASCII]",
+bet_archivepooling,subsampleFate,"Fate of a subsample",string,NA,,"[LOV]",
+bet_archivepooling,taxonID,"Species code, based on one or more sources",string,NA,,"[IF (sampleType = 'vert bycatch mam'), ELEMENT_OF('SMALL_MAMMAL', 'taxonID', 'F')][IF (sampleType = 'vert bycatch herp'), ELEMENT_OF('HERPETOLOGY', 'taxonID', 'F')][IF (sampleType = 'carabid'), ELEMENT_OF('BEETLE', 'taxonID', 'F')]","[IF (sampleType = 'vert bycatch mam'), ELEMENT_OF('SMALL_MAMMAL', 'taxonID', 'T')][IF (sampleType = 'vert bycatch herp'), ELEMENT_OF('HERPETOLOGY', 'taxonID', 'T')][IF (sampleType = 'carabid'), ELEMENT_OF('BEETLE', 'taxonID', 'T')]"
+bet_archivepooling,platformInfo,"Operating System and browser information (where applicable) of computer used during data entry",string,NA,,"[ASCII]",
+bet_archivepooling,recordedBy,"An identifier for the technician who recorded the data",string,NA,,"[ASCII]","[REQUIRE][FROM_PERSONNEL]"
+bet_archivepooling,uid,"Unique ID within NEON database; an identifier for the record",string,NA,"[CREATE_UID]",,
+bet_archivepooling,sampleType,"Type of sample",string,NA,,"[LOV]",
+bet_archivepooling,plotID,"Plot identifier (NEON site code_XXX)",string,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]","[NAMED_LOCATION_TYPE('OS Plot - bet')]",
+bet_archivepooling,subsampleIDList,"List of subsampleIDs",string,NA,"[SPLIT_BY('|')]","[REQUIRE][EXISTS]","[REQUIRE]"
+bet_archivepooling,setDate,"Date that trap was set",dateTime,NA,"[DERIVE_FROM_SAMPLE_TREE('bet_fielddata_in.sampleID')]",,
